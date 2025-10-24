@@ -1,191 +1,471 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Forsale - تصميم واجهات</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Roboto', sans-serif;
-      background-color: #121212;
-      color: #ffffff;
-      direction: rtl;
-      padding-bottom: 70px;
-    }
-    .top-nav {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 15px;
-      background-color: #1e1e1e;
-      border-bottom: 1px solid #333;
-    }
-    .logo {
-      font-size: 24px;
-      font-weight: bold;
-      color: #00bcd4;
-    }
-    .search-bar {
-      padding: 10px;
-      width: 50%;
-      border-radius: 20px;
-      border: none;
-      background-color: #333;
-      color: white;
-      text-align: right;
-    }
-    .account {
-      cursor: pointer;
-      padding: 5px 10px;
-      background-color: #00bcd4;
-      border-radius: 5px;
-      font-size: 14px;
-    }
-    .categories {
-      display: flex;
-      overflow-x: auto;
-      padding: 10px;
-      gap: 10px;
-      direction: rtl; 
-    }
-    .categories > div {
-        direction: rtl;
-    }
-    .category {
-      background-color: #333;
-      padding: 10px 20px;
-      border-radius: 20px;
-      white-space: nowrap;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-    .category:hover {
-        background-color: #00bcd4;
-    }
-    .products {
-      display: flex;
-      flex-wrap: wrap;
-      padding: 10px;
-      gap: 15px;
-      justify-content: center;
-    }
-    .product-card {
-      background-color: #1e1e1e;
-      padding: 10px;
-      border-radius: 10px;
-      width: 150px;
-      text-align: center;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-    @media (min-width: 640px) {
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forsale - منصة البيع والشراء العالمية (Pi Network)</title>
+    <!-- تحميل Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- تحميل مكتبة Firebase الأساسية -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, orderBy, where, getDocs, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // تعيين مستوى تسجيل الدخول لـ Firebase لسهولة المتابعة
+        setLogLevel('Debug');
+
+        // **متغيرات Firestoe الأساسية - ضرورية للعمل في بيئة Pi App**
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+
+        // ----------------------------------------------------
+        // 1. تهيئة Firebase
+        // ----------------------------------------------------
+        
+        let db = null;
+        let auth = null;
+        let userId = null;
+        let productsRef = null;
+        let cartRef = null;
+
+        const initFirebase = async () => {
+            try {
+                if (Object.keys(firebaseConfig).length === 0) {
+                    console.error("Firebase config is missing. Cannot initialize Firestore.");
+                    document.getElementById('product-grid').innerHTML = '<div class="col-span-full text-center text-red-400 p-8">خطأ: لم يتم تهيئة Firebase. يرجى التأكد من توفر متغيرات البيئة.</div>';
+                    return;
+                }
+                
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                // تسجيل الدخول (استخدام التوكن الخاص بـ Pi Network إذا توفر)
+                if (typeof __initial_auth_token !== 'undefined') {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth); // تسجيل دخول مجهول كخيار احتياطي
+                }
+
+                userId = auth.currentUser?.uid || crypto.randomUUID();
+                
+                // تعريف مسارات قواعد البيانات (باستخدام القواعد الأمنية لـ Pi App)
+                // المنتجات العامة (Public Data)
+                productsRef = collection(db, `/artifacts/${appId}/public/data/products`);
+                
+                // سلة المشتريات الخاصة بالمستخدم (Private Data)
+                cartRef = collection(db, `/artifacts/${appId}/users/${userId}/cart`);
+
+                console.log("Firebase Initialized. User ID:", userId);
+                document.getElementById('pi-user-id').textContent = userId;
+                
+                // بدء تحميل البيانات
+                loadProducts();
+                loadCart();
+
+            } catch (error) {
+                console.error("Error initializing Firebase:", error);
+                document.getElementById('product-grid').innerHTML = `<div class="col-span-full text-center text-red-400 p-8">خطأ في التهيئة: ${error.message}</div>`;
+            }
+        };
+
+        // ----------------------------------------------------
+        // 2. دالة عرض رسائل النظام
+        // ----------------------------------------------------
+        function showMessage(message, isError = false) {
+            const messageBox = document.getElementById('message-box');
+            messageBox.textContent = message;
+            messageBox.className = `p-3 rounded-xl mb-4 text-center text-sm transition-all duration-300 ${isError ? 'bg-red-600 text-white shadow-lg' : 'bg-green-600 text-white shadow-lg'}`;
+            messageBox.style.display = 'block';
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+            }, 4000);
+        }
+
+        // ----------------------------------------------------
+        // 3. دالة تحميل المنتجات
+        // ----------------------------------------------------
+        const loadProducts = () => {
+            if (!productsRef) return;
+
+            const productGrid = document.getElementById('product-grid');
+            productGrid.innerHTML = '<div class="col-span-full text-center p-8"><span class="animate-spin h-8 w-8 border-4 border-yellow-500 border-t-transparent rounded-full inline-block"></span> <p class="mt-2 text-gray-400">تحميل المنتجات...</p></div>';
+
+            // الاستماع للتحديثات في الوقت الحقيقي
+            onSnapshot(productsRef, (snapshot) => {
+                productGrid.innerHTML = ''; // تفريغ الشبكة
+                
+                // إضافة المنتجات الافتراضية إذا كانت فارغة
+                if (snapshot.empty) {
+                    productGrid.innerHTML = '<div class="col-span-full text-center p-8 text-gray-400">لا توجد منتجات حالياً. سنقوم بإضافة المنتجات الافتراضية المحددة الآن.</div>';
+                    addInitialProducts(); 
+                    return;
+                }
+
+                // فرز المنتجات بالاسم لضمان ترتيب ثابت
+                const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                products.sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+                
+                products.forEach(product => {
+                    productGrid.appendChild(createProductCard(product));
+                });
+            }, (error) => {
+                console.error("Error getting products: ", error);
+                productGrid.innerHTML = '<div class="col-span-full text-center text-red-400 p-8">خطأ في تحميل المنتجات.</div>';
+            });
+        };
+
+        // ----------------------------------------------------
+        // 4. دالة إنشاء بطاقة المنتج
+        // ----------------------------------------------------
+        function createProductCard(product) {
+            const card = document.createElement('div');
+            card.className = 'product-card bg-gray-800 rounded-2xl shadow-2xl overflow-hidden transform transition duration-300 hover:scale-[1.02] cursor-pointer border-2 border-transparent hover:border-yellow-500';
+            card.setAttribute('data-id', product.id);
+
+            // استخدام placehold.co لصور الذكاء الاصطناعي المؤقتة بناءً على الفئة
+            let placeholderText = product.category || 'Product';
+            if (product.name) {
+                placeholderText = product.name.split(' ').slice(0, 2).join(' '); // أول كلمتين من الاسم
+            }
+            const imageUrl = product.imageUrl || `https://placehold.co/400x300/1f2937/fcd34d?text=${encodeURIComponent(placeholderText)}`;
+
+            card.innerHTML = `
+                <img src="${imageUrl}" alt="${product.name}" class="w-full h-48 object-cover object-center" onerror="this.onerror=null;this.src='https://placehold.co/400x300/1f2937/fcd34d?text=${encodeURIComponent(product.category)}'">
+                <div class="p-6">
+                    <h3 class="text-2xl font-extrabold text-white mb-2">${product.name}</h3>
+                    <p class="text-sm text-gray-400 h-12 overflow-hidden mb-4">${product.description}</p>
+                    <div class="flex justify-between items-center mt-4">
+                        <p class="text-xl font-black text-yellow-400">
+                            ${product.pricePi} <span class="text-lg font-bold">π</span>
+                        </p>
+                        <button class="add-to-cart-btn bg-yellow-500 text-gray-900 font-extrabold py-2 px-4 rounded-xl shadow-xl hover:bg-yellow-400 transition duration-200 text-sm transform hover:translate-y-[-2px]" data-product-id="${product.id}" data-name="${product.name}" data-price="${product.pricePi}">
+                            + إضافة للسلة
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // إضافة مستمع الحدث لزر "إضافة للسلة"
+            card.querySelector('.add-to-cart-btn').addEventListener('click', (e) => {
+                e.stopPropagation(); // منع انتقال النقر إلى البطاقة
+                addToCart(product.id, product.name, product.pricePi);
+            });
+
+            return card;
+        }
+
+        // ----------------------------------------------------
+        // 5. دالة إضافة المنتجات الافتراضية
+        // ----------------------------------------------------
+        const addInitialProducts = async () => {
+            const initialProducts = [
+                // 1. العقارات
+                {
+                    name: 'شقة فاخرة - دبي (تملك AI)',
+                    description: 'حصص رقمية من عقارات فاخرة في دبي، يتم إدارة بيعها بالذكاء الاصطناعي لاختيار أفضل وقت للبيع.',
+                    pricePi: 750,
+                    imageUrl: 'https://placehold.co/400x300/22c55e/ffffff?text=DUBAI+APARTMENT',
+                    category: 'Real Estate'
+                },
+                // 2. السيارات
+                {
+                    name: 'سيارة كهربائية Tesla Model 3',
+                    description: 'سيارة Tesla Model 3 جديدة. يتم التفاوض على سعرها مع البائع والمشتري بذكاء اصطناعي لضمان أفضل سعر.',
+                    pricePi: 500,
+                    imageUrl: 'https://placehold.co/400x300/3b82f6/ffffff?text=TESLA+CAR',
+                    category: 'Cars'
+                },
+                {
+                    name: 'سيارة BMW X5 مستعملة',
+                    description: 'سيارة دفع رباعي فاخرة بحالة ممتازة، مراجعة بذكاء اصطناعي لضمان عدم وجود عيوب خفية.',
+                    pricePi: 350,
+                    imageUrl: 'https://placehold.co/400x300/3b82f6/ffffff?text=BMW+X5',
+                    category: 'Cars'
+                },
+                // 3. الإلكترونيات
+                {
+                    name: 'MacBook Pro M3 Max',
+                    description: 'لابتوب MacBook Pro M3 Max. أداء حاسوبي فائق للمحترفين والمبرمجين.',
+                    pricePi: 120,
+                    imageUrl: 'https://placehold.co/400x300/f97316/ffffff?text=MACBOOK',
+                    category: 'Electronics'
+                },
+                {
+                    name: 'هاتف iPhone 16 Pro Max',
+                    description: 'أحدث هواتف iPhone. كاميرا احترافية وتصميم عصري جذاب بتقنيات AI متقدمة.',
+                    pricePi: 70,
+                    imageUrl: 'https://placehold.co/400x300/f97316/ffffff?text=IPHONE',
+                    category: 'Electronics'
+                },
+                {
+                    name: 'سماعات Sony WH-1000XM5',
+                    description: 'سماعات لاسلكية رائدة بتقنية إلغاء الضوضاء الأكثر فعالية في السوق.',
+                    pricePi: 15,
+                    imageUrl: 'https://placehold.co/400x300/f97316/ffffff?text=HEADPHONES',
+                    category: 'Accessories'
+                },
+                // 4. السفر والسياحة
+                {
+                    name: 'رحلة إلى جزر المالديف (شاملة)',
+                    description: 'رحلة فاخرة لشخصين إلى جزر المالديف لمدة 7 أيام. الفنادق والطيران بالكامل بـ Pi Coin.',
+                    pricePi: 250,
+                    imageUrl: 'https://placehold.co/400x300/8b5cf6/ffffff?text=MALDIVES+TRIP',
+                    category: 'Travel'
+                },
+                // 5. الذهب والمجوهرات (قيمة عالية)
+                {
+                    name: 'سبيكة ذهب عيار 24 (10 جرام)',
+                    description: 'سبيكة ذهب خالصة عيار 24 بوزن 10 جرام، مقدمة مع شهادة ضمان دولية.',
+                    pricePi: 45,
+                    imageUrl: 'https://placehold.co/400x300/ca8a04/ffffff?text=GOLD+BAR',
+                    category: 'Luxury'
+                }
+            ];
+
+            const snapshot = await getDocs(productsRef);
+            if (snapshot.empty) {
+                for (const product of initialProducts) {
+                    try {
+                        // استخدام اسم المنتج كـ Doc ID مؤقت
+                        await setDoc(doc(productsRef, product.name.replace(/\s/g, '_').replace(/[^a-zA-Z0-9_]/g, '')), product);
+                    } catch (e) {
+                        console.error(`Error adding initial product ${product.name}:`, e);
+                    }
+                }
+                showMessage('تم إضافة المنتجات العالمية الافتراضية بنجاح! الآن يمكنك البدء.', false);
+            }
+        };
+
+        // ----------------------------------------------------
+        // 6. دالة إضافة المنتج إلى سلة المشتريات
+        // ----------------------------------------------------
+        const addToCart = async (productId, name, pricePi) => {
+            if (!cartRef) {
+                showMessage('خطأ: لم يتم تهيئة سلة المشتريات.', true);
+                return;
+            }
+
+            try {
+                // إنشاء مرجع لوثيقة سلة المشتريات باستخدام معرف المنتج (للتحديث)
+                const itemDocRef = doc(cartRef, productId);
+                const itemSnap = await getDoc(itemDocRef);
+
+                if (itemSnap.exists()) {
+                    // إذا كان المنتج موجودًا بالفعل، قم بزيادة الكمية
+                    const data = itemSnap.data();
+                    const newQuantity = data.quantity + 1;
+                    await updateDoc(itemDocRef, {
+                        quantity: newQuantity,
+                        totalPricePi: newQuantity * pricePi,
+                        updatedAt: new Date().toISOString()
+                    });
+                } else {
+                    // إذا كان المنتج جديدًا، قم بإضافته
+                    await setDoc(itemDocRef, {
+                        productId: productId,
+                        name: name,
+                        pricePi: pricePi,
+                        quantity: 1,
+                        totalPricePi: pricePi,
+                        addedAt: new Date().toISOString()
+                    });
+                }
+
+                showMessage(`تمت إضافة ${name} إلى السلة!`);
+                
+            } catch (e) {
+                console.error("Error adding to cart: ", e);
+                showMessage('خطأ في إضافة المنتج إلى السلة.', true);
+            }
+        };
+
+        // ----------------------------------------------------
+        // 7. دالة تحديث عدد عناصر السلة (لشريط التنقل)
+        // ----------------------------------------------------
+        const loadCart = () => {
+            if (!cartRef) return;
+            const cartCountElement = document.getElementById('cart-count');
+
+            // الاستماع للتحديثات في الوقت الحقيقي لسلة المشتريات
+            onSnapshot(cartRef, (snapshot) => {
+                let totalItems = 0;
+                snapshot.docs.forEach(doc => {
+                    totalItems += doc.data().quantity || 0;
+                });
+                cartCountElement.textContent = totalItems > 99 ? '99+' : totalItems;
+                if (totalItems > 0) {
+                    cartCountElement.classList.remove('hidden');
+                } else {
+                    cartCountElement.classList.add('hidden');
+                }
+            }, (error) => {
+                console.error("Error loading cart count:", error);
+                cartCountElement.textContent = '0';
+                cartCountElement.classList.add('hidden');
+            });
+        };
+
+        // ----------------------------------------------------
+        // 8. تشغيل تهيئة Firebase عند تحميل الصفحة
+        // ----------------------------------------------------
+        window.onload = initFirebase;
+
+    </script>
+    <style>
+        :root {
+            --primary-color: #fcd34d; /* أصفر ذهبي فخم */
+            --secondary-color: #1a1a1d; /* أسود غامق */
+            --text-color: #f3f4f6; /* أبيض ناصع */
+        }
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            direction: rtl;
+            padding-bottom: 70px;
+        }
+        .top-nav {
+            background-color: #121212;
+            border-bottom: 3px solid var(--primary-color);
+        }
         .product-card {
-            width: 200px;
+            background: #1f2937; /* لون أغمق للبطاقة */
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
         }
-    }
-    .product-card:hover {
-        transform: translateY(-5px);
-    }
-    .product-card img {
-      width: 100%;
-      height: 100px;
-      object-fit: cover;
-      border-radius: 5px;
-      margin-bottom: 5px;
-    }
-    .bottom-nav {
-      display: flex;
-      justify-content: space-around;
-      padding: 15px 10px;
-      background-color: #1e1e1e;
-      border-top: 1px solid #333;
-      position: fixed;
-      bottom: 0;
-      width: 100%;
-      z-index: 1000;
-    }
-    .nav-item {
-      cursor: pointer;
-      font-size: 14px;
-      color: #aaa;
-      transition: color 0.2s;
-    }
-    .nav-item:hover {
-        color: #00bcd4;
-    }
-  </style>
+        .product-card:hover {
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.8);
+        }
+        .add-to-cart-btn {
+            background-color: var(--primary-color);
+            color: #121212;
+            font-weight: 900;
+        }
+        .pi-icon {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            font-weight: 900;
+        }
+        /* تصميم زر القائمة العلوية لتفاصيل المستخدم */
+        .user-menu-btn {
+            background-color: #333;
+            color: var(--primary-color);
+            border-radius: 9999px;
+            padding: 8px 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            max-width: 150px;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+        .user-menu-btn:hover {
+            background-color: #444;
+        }
+        .shadow-2xl-dark {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+        }
+        /* تأثير النبض لزر البحث */
+        @keyframes pulse-yellow {
+            0% { box-shadow: 0 0 0 0 rgba(252, 211, 77, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(252, 211, 77, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(252, 211, 77, 0); }
+        }
+        #ai-search-button {
+            animation: pulse-yellow 2s infinite;
+        }
+    </style>
 </head>
-<body>
-  <div class="home-screen">
-    <header class="top-nav">
-      <div class="logo">Forsale</div>
-      <input type="text" class="search-bar" placeholder="ابحث عن منتج...">
-      <div class="account">الحساب</div>
-    </header>
-    <div class="categories">
-      <div class="category">إلكترونيات</div>
-      <div class="category">أزياء وموضة</div>
-      <div class="category">عقارات</div>
-      <div class="category">سيارات ومركبات</div>
-      <div class="category">مفروشات ومنزل</div>
-      <div class="category">خدمات</div>
-    </div>
-    <h2 class="text-xl font-bold p-3">منتجات موصى بها (1000+ قطعة)</h2>
-    <div id="currentTime" class="text-xs text-gray-400 text-center mb-2"></div>
-    <div class="products">
-      <div class="product-card">
-        <img src="https://placehold.co/150x100/1e1e1e/AAAAAA?text=Laptop" alt="منتج">
-        <h3>كمبيوتر محمول جديد</h3>
-        <p class="text-green-400">السعر: 1500 Pi</p>
-      </div>
-      <div class="product-card">
-        <img src="https://placehold.co/150x100/1e1e1e/AAAAAA?text=Car" alt="منتج">
-        <h3>سيارة مستعملة</h3>
-        <p class="text-green-400">السعر: 5000 Pi</p>
-      </div>
-      <div class="product-card">
-        <img src="https://placehold.co/150x100/1e1e1e/AAAAAA?text=Phone" alt="منتج">
-        <h3>هاتف ذكي</h3>
-        <p class="text-green-400">السعر: 50 Pi</p>
-      </div>
-      <div class="product-card">
-        <img src="https://placehold.co/150x100/1e1e1e/AAAAAA?text=Sofa" alt="منتج">
-        <h3>طقم كنب فاخر</h3>
-        <p class="text-green-400">السعر: 300 Pi</p>
-      </div>
-      <div class="product-card">
-        <img src="https://placehold.co/150x100/1e1e1e/AAAAAA?text=Watch" alt="منتج">
-        <h3>ساعة ذكية</h3>
-        <p class="text-green-400">السعر: 20 Pi</p>
-      </div>
-      <div class="product-card">
-        <img src="https://placehold.co/150x100/1e1e1e/AAAAAA?text=House" alt="منتج">
-        <h3>فيلا للإيجار</h3>
-        <p class="text-green-400">السعر: 10000 Pi</p>
-      </div>
-    </div>
-    <footer class="bottom-nav">
-      <div class="nav-item">الرئيسية</div>
-      <div class="nav-item">البحث</div>
-      <div class="nav-item">نشر إعلان</div>
-      <div class="nav-item">الملف الشخصي</div>
-    </footer>
-  </div>
-  <script>
-    function showTime() {
-        const timeElement = document.getElementById('currentTime');
-        if (timeElement) {
-            timeElement.innerHTML = "آخر تحديث: " + new Date().toLocaleTimeString('ar-EG');
-        }
-    }
-    showTime();
-    setInterval(function () {
-      showTime();
-    }, 10000);
-  </script>
+<body class="min-h-screen">
+
+    <!-- شريط التنقل العلوي الفخم -->
+    <header class="top-nav sticky top-0 z-50 shadow-2xl-dark">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
+            
+            <!-- الشعار والاسم -->
+            <div class="flex items-center space-x-2 space-x-reverse">
+                <span class="text-3xl font-black pi-icon">π</span>
+                <span class="text-3xl font-black text-white">FORSALE</span>
+            </div>
+
+            <!-- زر المستخدم ورمز سلة المشتريات -->
+            <div class="flex items-center space-x-4 space-x-reverse">
+                
+                <!-- زر المستخدم (لإظهار الـ User ID - مهم للتتبع في Testnet) -->
+                <div class="user-menu-btn text-sm hidden md:block">
+                    مستخدم π: <span id="pi-user-id" class="font-light text-gray-400">تحميل...</span>
+                </div>
+
+                <!-- زر سلة المشتريات -->
+                <button class="text-white hover:text-yellow-400 transition relative p-2 rounded-full hover:bg-gray-700">
+                    <!-- أيقونة سلة المشتريات -->
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    <!-- عدد العناصر في السلة (يتم تحديثه بـ JavaScript) -->
+                    <span id="cart-count" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full hidden">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 mt-10">
+
+        <!-- صندوق رسائل النظام (Success/Error Messages) -->
+        <div id="message-box" style="display: none;" class="p-3 rounded-xl mb-4 text-center text-sm"></div>
+
+        <!-- قسم البحث والتصفية (أساس ميزة AI Search) -->
+        <section class="mb-10 p-6 bg-gray-900 rounded-3xl shadow-2xl-dark">
+            <h2 class="text-3xl font-extrabold text-white mb-4 border-b border-gray-700 pb-2">البحث العالمي المدعوم بالذكاء الاصطناعي</h2>
+            <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 sm:space-x-reverse">
+                <input type="text" id="ai-search-input" placeholder="اكتب للبحث في جميع الفئات (عقارات، سيارات، إلكترونيات...) - دع AI يجد أفضل صفقة لك!" class="flex-grow p-4 rounded-xl bg-gray-700 text-white border border-gray-600 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500 transition placeholder-gray-400" />
+                <button id="ai-search-button" class="bg-yellow-500 text-gray-900 font-extrabold py-3 px-6 rounded-xl hover:bg-yellow-400 transition shadow-lg transform hover:scale-[1.05]">
+                    بحث AI
+                </button>
+            </div>
+            <p class="mt-3 text-sm text-gray-400">البحث هنا سيعتمد على تحليل اللغة الطبيعية واختيار أفضل الصفقات بالذكاء الاصطناعي فقط، دون تدخل بشري.</p>
+        </section>
+
+        <!-- شبكة عرض المنتجات الديناميكية -->
+        <section>
+            <h2 class="text-3xl font-extrabold text-white mb-6 border-b-4 border-yellow-500 pb-3 inline-block">صفقات عالمية مختارة بواسطة AI</h2>
+            <div id="product-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                <!-- المنتجات سيتم إضافتها هنا بواسطة JavaScript و Firestore -->
+                <div class="col-span-full text-center p-8">
+                    <span class="animate-spin h-8 w-8 border-4 border-yellow-500 border-t-transparent rounded-full inline-block"></span>
+                    <p class="mt-2 text-gray-400">تحميل المنتجات...</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- تذييل الصفحة الفخم المتوافق مع Pi Browser -->
+    <footer class="fixed bottom-0 left-0 right-0 bg-gray-900 border-t-2 border-yellow-500 shadow-2xl-dark z-50">
+        <div class="flex justify-around items-center h-16 text-xs text-gray-400">
+            <!-- الرئيسية -->
+            <a href="#" class="flex flex-col items-center hover:text-yellow-400 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7m-7-7v12a4 4 0 004 4m-4-4a4 4 0 00-4 4"></path></svg>
+                الرئيسية
+            </a>
+            <!-- منتجاتي (البائع) -->
+            <a href="#" class="flex flex-col items-center hover:text-yellow-400 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                منتجاتي (البائع)
+            </a>
+            <!-- تتبع الشحن AI -->
+            <a href="#" class="flex flex-col items-center hover:text-yellow-400 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"></path></svg>
+                تتبع الشحن AI
+            </a>
+            <!-- الدفع بـ Pi Coin (سلة المشتريات) -->
+            <a href="#" class="flex flex-col items-center hover:text-yellow-400 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"></path></svg>
+                الدفع (π)
+            </a>
+        </div>
+    </footer>
+    
 </body>
 </html>
