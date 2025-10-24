@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forsale - منصة البيع والشراء العالمية (Pi Network)</title>
-    <!-- تحميل Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Forsale - منصة البيع والشراء العالمية</title>
+    
+<script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-    <!-- تحميل مكتبة Firebase الأساسية -->
-    <script type="module">
+    
+<script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, orderBy, where, getDocs, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // تم إضافة deleteDoc و writeBatch لإدارة عمليات الدفع وتفريغ السلة بكفاءة
+        import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, orderBy, where, getDocs, setLogLevel, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
         // تعيين مستوى تسجيل الدخول لـ Firebase لسهولة المتابعة
         setLogLevel('Debug');
@@ -29,6 +30,8 @@
         let userId = null;
         let productsRef = null;
         let cartRef = null;
+        let ordersRef = null; // **جديد: مرجع لمجموعة الطلبات**
+        let cartData = []; // متغير لتخزين بيانات السلة محلياً
 
         const initFirebase = async () => {
             try {
@@ -52,11 +55,9 @@
                 userId = auth.currentUser?.uid || crypto.randomUUID();
                 
                 // تعريف مسارات قواعد البيانات (باستخدام القواعد الأمنية لـ Pi App)
-                // المنتجات العامة (Public Data)
                 productsRef = collection(db, `/artifacts/${appId}/public/data/products`);
-                
-                // سلة المشتريات الخاصة بالمستخدم (Private Data)
                 cartRef = collection(db, `/artifacts/${appId}/users/${userId}/cart`);
+                ordersRef = collection(db, `/artifacts/${appId}/users/${userId}/orders`); // **مسار مجموعة الطلبات الجديدة**
 
                 console.log("Firebase Initialized. User ID:", userId);
                 document.getElementById('pi-user-id').textContent = userId;
@@ -85,7 +86,7 @@
         }
 
         // ----------------------------------------------------
-        // 3. دالة تحميل المنتجات
+        // 3. دالة تحميل المنتجات (من Firestor - تحديث فوري)
         // ----------------------------------------------------
         const loadProducts = () => {
             if (!productsRef) return;
@@ -99,12 +100,11 @@
                 
                 // إضافة المنتجات الافتراضية إذا كانت فارغة
                 if (snapshot.empty) {
-                    productGrid.innerHTML = '<div class="col-span-full text-center p-8 text-gray-400">لا توجد منتجات حالياً. سنقوم بإضافة المنتجات الافتراضية المحددة الآن.</div>';
                     addInitialProducts(); 
                     return;
                 }
 
-                // فرز المنتجات بالاسم لضمان ترتيب ثابت
+                // فرز المنتجات بالاسم
                 const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 products.sort((a, b) => a.name.localeCompare(b.name, 'ar'));
                 
@@ -118,39 +118,46 @@
         };
 
         // ----------------------------------------------------
-        // 4. دالة إنشاء بطاقة المنتج
+        // 4. دالة إنشاء بطاقة المنتج العادي
         // ----------------------------------------------------
         function createProductCard(product) {
+            const ACCENT_COLOR_CLASSES = {
+                BUTTON_BG: 'bg-yellow-500',
+                BUTTON_HOVER: 'hover:bg-yellow-400',
+                PRICE_TEXT: 'text-yellow-400',
+                CARD_BORDER: 'hover:border-yellow-500'
+            };
+
             const card = document.createElement('div');
-            card.className = 'product-card bg-gray-800 rounded-2xl shadow-2xl overflow-hidden transform transition duration-300 hover:scale-[1.02] cursor-pointer border-2 border-transparent hover:border-yellow-500';
+            card.className = `product-card bg-gray-800 rounded-2xl shadow-2xl overflow-hidden transform transition duration-300 hover:scale-[1.02] cursor-pointer border-2 border-transparent ${ACCENT_COLOR_CLASSES.CARD_BORDER}`;
             card.setAttribute('data-id', product.id);
 
-            // استخدام placehold.co لصور الذكاء الاصطناعي المؤقتة بناءً على الفئة
+            
             let placeholderText = product.category || 'Product';
             if (product.name) {
-                placeholderText = product.name.split(' ').slice(0, 2).join(' '); // أول كلمتين من الاسم
+                placeholderText = product.name.split(' ').slice(0, 2).join(' '); 
             }
+            
             const imageUrl = product.imageUrl || `https://placehold.co/400x300/1f2937/fcd34d?text=${encodeURIComponent(placeholderText)}`;
-
+            
             card.innerHTML = `
                 <img src="${imageUrl}" alt="${product.name}" class="w-full h-48 object-cover object-center" onerror="this.onerror=null;this.src='https://placehold.co/400x300/1f2937/fcd34d?text=${encodeURIComponent(product.category)}'">
                 <div class="p-6">
                     <h3 class="text-2xl font-extrabold text-white mb-2">${product.name}</h3>
                     <p class="text-sm text-gray-400 h-12 overflow-hidden mb-4">${product.description}</p>
                     <div class="flex justify-between items-center mt-4">
-                        <p class="text-xl font-black text-yellow-400">
+                        <p class="text-xl font-black ${ACCENT_COLOR_CLASSES.PRICE_TEXT}">
                             ${product.pricePi} <span class="text-lg font-bold">π</span>
                         </p>
-                        <button class="add-to-cart-btn bg-yellow-500 text-gray-900 font-extrabold py-2 px-4 rounded-xl shadow-xl hover:bg-yellow-400 transition duration-200 text-sm transform hover:translate-y-[-2px]" data-product-id="${product.id}" data-name="${product.name}" data-price="${product.pricePi}">
+                        <button class="add-to-cart-btn ${ACCENT_COLOR_CLASSES.BUTTON_BG} text-gray-900 font-extrabold py-2 px-4 rounded-xl shadow-xl ${ACCENT_COLOR_CLASSES.BUTTON_HOVER} transition duration-200 text-sm transform hover:translate-y-[-2px]" data-product-id="${product.id}" data-name="${product.name}" data-price="${product.pricePi}">
                             + إضافة للسلة
                         </button>
                     </div>
                 </div>
             `;
             
-            // إضافة مستمع الحدث لزر "إضافة للسلة"
             card.querySelector('.add-to-cart-btn').addEventListener('click', (e) => {
-                e.stopPropagation(); // منع انتقال النقر إلى البطاقة
+                e.stopPropagation(); 
                 addToCart(product.id, product.name, product.pricePi);
             });
 
@@ -158,84 +165,28 @@
         }
 
         // ----------------------------------------------------
-        // 5. دالة إضافة المنتجات الافتراضية
+        // 5. دالة إضافة المنتجات الافتراضية (مختصرة)
         // ----------------------------------------------------
         const addInitialProducts = async () => {
-            const initialProducts = [
-                // 1. العقارات
-                {
-                    name: 'شقة فاخرة - دبي (تملك AI)',
-                    description: 'حصص رقمية من عقارات فاخرة في دبي، يتم إدارة بيعها بالذكاء الاصطناعي لاختيار أفضل وقت للبيع.',
-                    pricePi: 750,
-                    imageUrl: 'https://placehold.co/400x300/22c55e/ffffff?text=DUBAI+APARTMENT',
-                    category: 'Real Estate'
-                },
-                // 2. السيارات
-                {
-                    name: 'سيارة كهربائية Tesla Model 3',
-                    description: 'سيارة Tesla Model 3 جديدة. يتم التفاوض على سعرها مع البائع والمشتري بذكاء اصطناعي لضمان أفضل سعر.',
-                    pricePi: 500,
-                    imageUrl: 'https://placehold.co/400x300/3b82f6/ffffff?text=TESLA+CAR',
-                    category: 'Cars'
-                },
-                {
-                    name: 'سيارة BMW X5 مستعملة',
-                    description: 'سيارة دفع رباعي فاخرة بحالة ممتازة، مراجعة بذكاء اصطناعي لضمان عدم وجود عيوب خفية.',
-                    pricePi: 350,
-                    imageUrl: 'https://placehold.co/400x300/3b82f6/ffffff?text=BMW+X5',
-                    category: 'Cars'
-                },
-                // 3. الإلكترونيات
-                {
-                    name: 'MacBook Pro M3 Max',
-                    description: 'لابتوب MacBook Pro M3 Max. أداء حاسوبي فائق للمحترفين والمبرمجين.',
-                    pricePi: 120,
-                    imageUrl: 'https://placehold.co/400x300/f97316/ffffff?text=MACBOOK',
-                    category: 'Electronics'
-                },
-                {
-                    name: 'هاتف iPhone 16 Pro Max',
-                    description: 'أحدث هواتف iPhone. كاميرا احترافية وتصميم عصري جذاب بتقنيات AI متقدمة.',
-                    pricePi: 70,
-                    imageUrl: 'https://placehold.co/400x300/f97316/ffffff?text=IPHONE',
-                    category: 'Electronics'
-                },
-                {
-                    name: 'سماعات Sony WH-1000XM5',
-                    description: 'سماعات لاسلكية رائدة بتقنية إلغاء الضوضاء الأكثر فعالية في السوق.',
-                    pricePi: 15,
-                    imageUrl: 'https://placehold.co/400x300/f97316/ffffff?text=HEADPHONES',
-                    category: 'Accessories'
-                },
-                // 4. السفر والسياحة
-                {
-                    name: 'رحلة إلى جزر المالديف (شاملة)',
-                    description: 'رحلة فاخرة لشخصين إلى جزر المالديف لمدة 7 أيام. الفنادق والطيران بالكامل بـ Pi Coin.',
-                    pricePi: 250,
-                    imageUrl: 'https://placehold.co/400x300/8b5cf6/ffffff?text=MALDIVES+TRIP',
-                    category: 'Travel'
-                },
-                // 5. الذهب والمجوهرات (قيمة عالية)
-                {
-                    name: 'سبيكة ذهب عيار 24 (10 جرام)',
-                    description: 'سبيكة ذهب خالصة عيار 24 بوزن 10 جرام، مقدمة مع شهادة ضمان دولية.',
-                    pricePi: 45,
-                    imageUrl: 'https://placehold.co/400x300/ca8a04/ffffff?text=GOLD+BAR',
-                    category: 'Luxury'
-                }
+             const initialProducts = [
+                { name: 'شقة فاخرة - دبي', description: 'حصص رقمية من عقارات فاخرة في دبي.', pricePi: 750, imageUrl: 'https://placehold.co/400x300/22c55e/ffffff?text=DUBAI', category: 'Real Estate' },
+                { name: 'سيارة Tesla Model 3', description: 'سيارة كهربائية جديدة بتفاوض AI.', pricePi: 500, imageUrl: 'https://placehold.co/400x300/3b82f6/ffffff?text=TESLA', category: 'Cars' },
+                { name: 'MacBook Pro M3 Max', description: 'لابتوب بأداء حاسوبي فائق.', pricePi: 120, imageUrl: 'https://placehold.co/400x300/f97316/ffffff?text=MACBOOK', category: 'Electronics' },
+                { name: 'رحلة إلى جزر المالديف', description: 'رحلة فاخرة لشخصين لمدة 7 أيام.', pricePi: 250, imageUrl: 'https://placehold.co/400x300/8b5cf6/ffffff?text=MALDIVES', category: 'Travel' },
+                { name: 'سبيكة ذهب عيار 24', description: 'سبيكة ذهب خالصة بوزن 10 جرام.', pricePi: 45, imageUrl: 'https://placehold.co/400x300/ca8a04/ffffff?text=GOLD', category: 'Luxury' }
             ];
 
             const snapshot = await getDocs(productsRef);
             if (snapshot.empty) {
                 for (const product of initialProducts) {
                     try {
-                        // استخدام اسم المنتج كـ Doc ID مؤقت
-                        await setDoc(doc(productsRef, product.name.replace(/\s/g, '_').replace(/[^a-zA-Z0-9_]/g, '')), product);
+                        const docId = product.name.replace(/\s/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+                        await setDoc(doc(productsRef, docId), { ...product, id: docId });
                     } catch (e) {
                         console.error(`Error adding initial product ${product.name}:`, e);
                     }
                 }
-                showMessage('تم إضافة المنتجات العالمية الافتراضية بنجاح! الآن يمكنك البدء.', false);
+                showMessage('تمت إضافة المنتجات العالمية الافتراضية بنجاح!', false);
             }
         };
 
@@ -243,33 +194,33 @@
         // 6. دالة إضافة المنتج إلى سلة المشتريات
         // ----------------------------------------------------
         const addToCart = async (productId, name, pricePi) => {
-            if (!cartRef) {
-                showMessage('خطأ: لم يتم تهيئة سلة المشتريات.', true);
-                return;
-            }
+            if (!cartRef) { showMessage('خطأ: لم يتم تهيئة سلة المشتريات.', true); return; }
 
             try {
-                // إنشاء مرجع لوثيقة سلة المشتريات باستخدام معرف المنتج (للتحديث)
                 const itemDocRef = doc(cartRef, productId);
                 const itemSnap = await getDoc(itemDocRef);
+                const numericPricePi = parseFloat(pricePi);
+
+                if (isNaN(numericPricePi) || numericPricePi <= 0) {
+                     showMessage('خطأ: سعر المنتج غير صالح.', true);
+                     return;
+                }
 
                 if (itemSnap.exists()) {
-                    // إذا كان المنتج موجودًا بالفعل، قم بزيادة الكمية
                     const data = itemSnap.data();
                     const newQuantity = data.quantity + 1;
                     await updateDoc(itemDocRef, {
                         quantity: newQuantity,
-                        totalPricePi: newQuantity * pricePi,
+                        totalPricePi: newQuantity * numericPricePi,
                         updatedAt: new Date().toISOString()
                     });
                 } else {
-                    // إذا كان المنتج جديدًا، قم بإضافته
                     await setDoc(itemDocRef, {
                         productId: productId,
                         name: name,
-                        pricePi: pricePi,
+                        pricePi: numericPricePi,
                         quantity: 1,
-                        totalPricePi: pricePi,
+                        totalPricePi: numericPricePi,
                         addedAt: new Date().toISOString()
                     });
                 }
@@ -281,37 +232,433 @@
                 showMessage('خطأ في إضافة المنتج إلى السلة.', true);
             }
         };
+        
+        // ----------------------------------------------------
+        // 7. دوال إدارة السلة (زيادة/نقصان/حذف)
+        // ----------------------------------------------------
+
+        const updateCartItemQuantity = async (productId, delta) => {
+            if (!cartRef) return;
+            try {
+                const itemDocRef = doc(cartRef, productId);
+                const itemSnap = await getDoc(itemDocRef);
+
+                if (itemSnap.exists()) {
+                    const data = itemSnap.data();
+                    const currentQuantity = data.quantity;
+                    const numericPricePi = data.pricePi;
+                    const newQuantity = currentQuantity + delta;
+
+                    if (newQuantity <= 0) {
+                        // إذا كانت الكمية صفر أو أقل، احذف المنتج
+                        await deleteDoc(itemDocRef);
+                        showMessage(`${data.name} تم حذفه من السلة.`);
+                    } else {
+                        // إذا كانت الكمية أكبر من صفر، قم بالتحديث
+                        await updateDoc(itemDocRef, {
+                            quantity: newQuantity,
+                            totalPricePi: newQuantity * numericPricePi,
+                            updatedAt: new Date().toISOString()
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error("Error updating cart item quantity:", e);
+                showMessage('خطأ في تحديث كمية المنتج في السلة.', true);
+            }
+        };
+
+        const removeItemFromCart = async (productId, name) => {
+            if (!cartRef) return;
+            try {
+                const itemDocRef = doc(cartRef, productId);
+                await deleteDoc(itemDocRef);
+                showMessage(`تم حذف ${name} بالكامل من السلة.`);
+            } catch (e) {
+                console.error("Error removing item from cart:", e);
+                showMessage('خطأ في إزالة المنتج من السلة.', true);
+            }
+        };
+
 
         // ----------------------------------------------------
-        // 7. دالة تحديث عدد عناصر السلة (لشريط التنقل)
+        // 8. دالة تحديث وعرض سلة المشتريات (المودال)
         // ----------------------------------------------------
         const loadCart = () => {
             if (!cartRef) return;
             const cartCountElement = document.getElementById('cart-count');
+            const cartContentDiv = document.getElementById('cart-content');
+            const cartTotalSpan = document.getElementById('cart-total');
+            const checkoutButton = document.getElementById('checkout-btn');
 
-            // الاستماع للتحديثات في الوقت الحقيقي لسلة المشتريات
             onSnapshot(cartRef, (snapshot) => {
+                cartData = []; // تحديث البيانات المحلية
                 let totalItems = 0;
+                let totalPrice = 0;
+                cartContentDiv.innerHTML = '';
+
                 snapshot.docs.forEach(doc => {
-                    totalItems += doc.data().quantity || 0;
+                    const item = { id: doc.id, ...doc.data() };
+                    cartData.push(item);
+                    totalItems += item.quantity || 0;
+                    totalPrice += item.totalPricePi || 0;
+                    
+                    // إنشاء عنصر السلة في المودال
+                    cartContentDiv.appendChild(createCartItemElement(item));
                 });
+                
+                // تحديث العداد
                 cartCountElement.textContent = totalItems > 99 ? '99+' : totalItems;
                 if (totalItems > 0) {
                     cartCountElement.classList.remove('hidden');
+                    cartTotalSpan.textContent = totalPrice.toFixed(2);
+                    checkoutButton.disabled = false;
+                    document.getElementById('empty-cart-message').classList.add('hidden');
                 } else {
                     cartCountElement.classList.add('hidden');
+                    cartTotalSpan.textContent = '0.00';
+                    checkoutButton.disabled = true;
+                    document.getElementById('empty-cart-message').classList.remove('hidden');
                 }
+
             }, (error) => {
                 console.error("Error loading cart count:", error);
                 cartCountElement.textContent = '0';
                 cartCountElement.classList.add('hidden');
             });
         };
+        
+        // ----------------------------------------------------
+        // 9. دالة إنشاء عنصر في سلة المشتريات داخل المودال
+        // ----------------------------------------------------
+        function createCartItemElement(item) {
+            const div = document.createElement('div');
+            div.className = 'flex items-center justify-between p-4 bg-gray-700 rounded-xl mb-3 shadow-md border-r-4 border-yellow-500';
+            div.innerHTML = `
+                <div class="flex-grow ml-3">
+                    <p class="text-white font-bold text-lg">${item.name}</p>
+                    <p class="text-sm text-gray-300">${item.pricePi.toFixed(2)} π / للوحدة</p>
+                </div>
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <!-- أزرار التحكم بالكمية -->
+                    <button class="qty-btn bg-red-600 hover:bg-red-500 text-white p-1 rounded-full w-6 h-6 flex items-center justify-center text-xl font-bold transition" data-id="${item.id}" data-delta="-1" title="تقليل الكمية">
+                        −
+                    </button>
+                    <span class="text-white font-extrabold text-xl w-6 text-center">${item.quantity}</span>
+                    <button class="qty-btn bg-green-600 hover:bg-green-500 text-white p-1 rounded-full w-6 h-6 flex items-center justify-center text-xl font-bold transition" data-id="${item.id}" data-delta="1" title="زيادة الكمية">
+                        +
+                    </button>
+                </div>
+                <!-- السعر الإجمالي للعنصر -->
+                <div class="ml-4 text-left">
+                    <p class="text-xl font-black text-yellow-400">${item.totalPricePi.toFixed(2)} π</p>
+                </div>
+                <!-- زر الحذف -->
+                <button class="remove-btn text-gray-400 hover:text-red-500 transition mr-2" data-id="${item.id}" data-name="${item.name}" title="إزالة من السلة">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+            `;
+            
+            // إضافة مستمعي الأحداث
+            div.querySelectorAll('.qty-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const productId = e.currentTarget.getAttribute('data-id');
+                    const delta = parseInt(e.currentTarget.getAttribute('data-delta'));
+                    updateCartItemQuantity(productId, delta);
+                });
+            });
+
+            div.querySelector('.remove-btn').addEventListener('click', (e) => {
+                const productId = e.currentTarget.getAttribute('data-id');
+                const name = e.currentTarget.getAttribute('data-name');
+                removeItemFromCart(productId, name);
+            });
+
+            return div;
+        }
 
         // ----------------------------------------------------
-        // 8. تشغيل تهيئة Firebase عند تحميل الصفحة
+        // 10. وظائف عرض وإخفاء المودال
         // ----------------------------------------------------
-        window.onload = initFirebase;
+        const cartModal = document.getElementById('cart-modal');
+        const checkoutModal = document.getElementById('checkout-modal'); // **جديد: مودال الدفع**
+        
+        const openCartButton = document.getElementById('open-cart-btn');
+        const closeCartButton = document.getElementById('close-cart-btn');
+        const checkoutButton = document.getElementById('checkout-btn'); // زر الدفع داخل سلة المشتريات
+        const closeCheckoutButton = document.getElementById('close-checkout-btn'); // زر إغلاق مودال الدفع
+
+        const showCartModal = () => {
+            cartModal.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        };
+
+        const hideCartModal = () => {
+            cartModal.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        };
+
+        const showCheckoutModal = () => {
+            // تحديث إجمالي الدفع وعرضه
+            const total = cartData.reduce((sum, item) => sum + (item.totalPricePi || 0), 0).toFixed(2);
+            document.getElementById('checkout-total-pi').textContent = total;
+            document.getElementById('checkout-product-count').textContent = cartData.length;
+
+            hideCartModal(); // إخفاء سلة المشتريات
+            checkoutModal.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        };
+        
+        const hideCheckoutModal = () => {
+            checkoutModal.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        };
+
+        // ----------------------------------------------------
+        // 11. وظيفة معالجة الدفع (محاكاة Pi Checkout)
+        // ----------------------------------------------------
+        const handlePiCheckout = async () => {
+            if (cartData.length === 0 || !ordersRef || !cartRef) {
+                showMessage("السلة فارغة أو هناك خطأ في التهيئة.", true);
+                return;
+            }
+
+            // تعطيل زر الدفع وإظهار التحميل
+            const confirmBtn = document.getElementById('confirm-checkout-btn');
+            const originalText = confirmBtn.innerHTML;
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<span class="animate-spin h-5 w-5 border-4 border-t-transparent border-white rounded-full inline-block ml-2"></span> جاري معالجة الدفع...';
+            
+            const totalAmount = cartData.reduce((sum, item) => sum + (item.totalPricePi || 0), 0);
+
+            try {
+                // ** الخطوة 1: محاكاة عملية الدفع على شبكة Pi **
+                showMessage(`جاري محاولة تحويل ${totalAmount.toFixed(2)} π...`, false);
+                await new Promise(resolve => setTimeout(resolve, 2500)); // محاكاة التأخير في المعاملة
+
+                // ** الخطوة 2: تسجيل الطلب في Firestore **
+                const orderPayload = {
+                    userId: userId,
+                    totalPi: totalAmount,
+                    items: cartData.map(item => ({
+                        productId: item.productId,
+                        name: item.name,
+                        quantity: item.quantity,
+                        unitPricePi: item.pricePi,
+                        totalPricePi: item.totalPricePi
+                    })),
+                    status: 'Processing', // حالة أولية للطلب
+                    createdAt: new Date().toISOString()
+                };
+
+                await addDoc(ordersRef, orderPayload);
+                showMessage("تم تسجيل طلبك بنجاح. جاري تفريغ السلة.", false);
+
+                // ** الخطوة 3: تفريغ سلة المشتريات باستخدام Batch Write **
+                const batch = writeBatch(db);
+                const cartSnapshot = await getDocs(cartRef);
+                cartSnapshot.docs.forEach((docItem) => {
+                    batch.delete(docItem.ref);
+                });
+                await batch.commit();
+
+                // ** الخطوة 4: الإكمال والرسالة النهائية **
+                hideCheckoutModal();
+                showMessage(`🎉 عملية دفع ناجحة! تم خصم ${totalAmount.toFixed(2)} π وإرسال الطلب.`, false);
+                // هنا يمكن أن نضيف انتقالاً إلى صفحة 'تتبع الطلبات' في المستقبل
+
+            } catch (error) {
+                console.error("Checkout Failed:", error);
+                showMessage("فشل في معالجة الدفع أو تسجيل الطلب. يرجى المحاولة مرة أخرى.", true);
+            } finally {
+                // إعادة الزر لوضعه الطبيعي
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = originalText;
+            }
+        };
+
+
+        // ----------------------------------------------------
+        // 12. API Utility: Fetch with Exponential Backoff (مختصرة)
+        // ----------------------------------------------------
+        const fetchWithExponentialBackoff = async (url, options, maxRetries = 5) => {
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        if (response.status === 429 || response.status >= 500) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        const errorBody = await response.json().catch(() => ({ message: 'Unknown API Error' }));
+                        throw new Error(`API Error: ${response.status} - ${errorBody.message || 'Client Error'}`);
+                    }
+                    return response;
+                } catch (error) {
+                    if (attempt === maxRetries - 1) {
+                        console.error("Max retries reached. Failed to fetch:", error);
+                        throw error;
+                    }
+                    const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        };
+
+        // ----------------------------------------------------
+        // 13. دالة تنفيذ البحث بالذكاء الاصطناعي (مختصرة)
+        // ----------------------------------------------------
+        const performAISearch = async () => {
+            // ... (نفس كود البحث بالذكاء الاصطناعي السابق - بدون تغيير) ...
+            const inputElement = document.getElementById('ai-search-input');
+            const query = inputElement.value.trim();
+            const searchResultsContainer = document.getElementById('ai-search-results');
+            const searchButton = document.getElementById('ai-search-button');
+
+            searchResultsContainer.innerHTML = '';
+            
+            if (!query) { showMessage('الرجاء إدخال ما تبحث عنه أولاً!', true); return; }
+
+            searchButton.disabled = true;
+            searchButton.style.animation = 'none'; 
+            searchButton.innerHTML = '<span class="animate-spin h-5 w-5 border-4 border-t-transparent border-white rounded-full inline-block ml-2"></span> جاري التحليل...';
+            showMessage(`الذكاء الاصطناعي يحلل طلبك: "${query}"...`, false);
+
+            const apiKey = ""; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            const systemPrompt = `أنت خبير ذكاء اصطناعي في سوق عالمي للمنتجات (مثل العقارات، السيارات، الإلكترونيات) يتم تداوله بـ Pi Coin (π). مهمتك هي تحليل طلب المستخدم واستخدام Google Search للعثور على أفضل توصية لمنتج يتناسب مع الطلب. يجب أن يكون المنتج ذا قيمة (كبيرة أو صغيرة) وتعيين سعر تخيلي له بالـ Pi Coin (π). يجب أن تكون جميع النصوص الناتجة باللغة العربية. تنسيق الإخراج: يجب أن يكون الناتج JSON حصراً.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: query }] }],
+                tools: [{ "google_search": {} }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            "name": { "type": "STRING", "description": "اسم المنتج الموصى به." },
+                            "description": { "type": "STRING", "description": "وصف مفصل لصفقة الذكاء الاصطناعي الموصى بها." },
+                            "pricePi": { "type": "NUMBER", "description": "سعر المنتج المقترح بالـ Pi Coin (π). استخدم رقماً صحيحاً أو عشرياً." },
+                        },
+                        "propertyOrdering": ["name", "description", "pricePi"]
+                    }
+                }
+            };
+            
+            try {
+                const response = await fetchWithExponentialBackoff(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    const jsonText = candidate.content.parts[0].text;
+                    const parsedResult = JSON.parse(jsonText);
+                    
+                    let sources = [];
+                    const groundingMetadata = candidate.groundingMetadata;
+                    if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                        sources = groundingMetadata.groundingAttributions
+                            .map(attribution => ({ uri: attribution.web?.uri, title: attribution.web?.title }))
+                            .filter(source => source.uri && source.title);
+                    }
+
+                    searchResultsContainer.appendChild(createAISearchCard(parsedResult, sources));
+                    showMessage('تم العثور على أفضل صفقة لك بواسطة الذكاء الاصطناعي!', false);
+
+                } else {
+                    showMessage('فشل الذكاء الاصطناعي في تقديم توصية. ربما كانت الإجابة فارغة.', true);
+                }
+
+            } catch (error) {
+                console.error("AI Search Failed:", error);
+                showMessage(`خطأ في الاتصال بخادم الذكاء الاصطناعي. الرجاء المحاولة مرة أخرى.`, true);
+            } finally {
+                searchButton.disabled = false;
+                searchButton.innerHTML = 'بحث AI';
+                searchButton.style.animation = 'pulse-yellow 2s infinite';
+            }
+        };
+        
+        // ----------------------------------------------------
+        // 14. دالة إنشاء بطاقة نتيجة بحث الذكاء الاصطناعي (مختصرة)
+        // ----------------------------------------------------
+        const createAISearchCard = (result, sources) => {
+            const ACCENT_COLOR_CLASSES = {
+                BUTTON_BG: 'bg-yellow-500',
+                PRICE_TEXT: 'text-yellow-400',
+                CARD_BORDER: 'border-yellow-500' 
+            };
+            
+            const card = document.createElement('div');
+            card.className = `bg-gray-900 border-4 ${ACCENT_COLOR_CLASSES.CARD_BORDER} rounded-3xl p-6 shadow-2xl-dark transform hover:scale-[1.01] transition duration-300`;
+            
+            const pricePi = parseFloat(result.pricePi) || 0;
+            const safeName = result.name.replace(/'/g, "\\'"); 
+
+            card.innerHTML = `
+                <div class="flex items-center mb-4 border-b border-yellow-700 pb-3">
+                    <span class="text-4xl text-yellow-500 ml-3">⭐</span>
+                    <h3 class="text-3xl font-black text-white">توصية الذكاء الاصطناعي الأفضل</h3>
+                </div>
+                <div class="bg-gray-800 p-5 rounded-xl">
+                    <h4 class="text-2xl font-extrabold text-yellow-400 mb-2">${result.name}</h4>
+                    <p class="text-gray-300 mb-4">${result.description}</p>
+                    <div class="flex flex-col sm:flex-row justify-between items-center border-t border-gray-700 pt-3 mt-4">
+                        <p class="text-3xl font-black ${ACCENT_COLOR_CLASSES.PRICE_TEXT}">
+                            ${pricePi.toFixed(2)} <span class="text-xl font-bold">π</span>
+                        </p>
+                        <button class="add-to-cart-btn ${ACCENT_COLOR_CLASSES.BUTTON_BG} text-gray-900 font-extrabold py-3 px-6 rounded-xl shadow-xl hover:bg-yellow-400 transition duration-200 text-base w-full sm:w-auto transform hover:translate-y-[-2px]" onclick="window.addToCart(crypto.randomUUID(), '${safeName}', ${pricePi})">
+                            + أضف صفقة AI للسلة
+                        </button>
+                    </div>
+                    ${sources && sources.length > 0 ? `
+                        <div class="mt-4 pt-3 border-t border-gray-700">
+                            <p class="text-sm font-bold text-gray-400 mb-2">مصادر معلومات السوق:</p>
+                            <ul class="list-disc pr-5 text-sm text-gray-500 space-y-1">
+                                ${sources.map(s => `<li><a href="${s.uri}" target="_blank" class="hover:text-yellow-400 underline">${s.title}</a></li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            return card;
+        };
+
+
+        // ----------------------------------------------------
+        // 15. تشغيل تهيئة Firebase وإضافة مستمع البحث والمودال
+        // ----------------------------------------------------
+        window.onload = () => {
+            initFirebase();
+            document.getElementById('ai-search-button').addEventListener('click', performAISearch);
+            
+            // مستمعو أحداث سلة المشتريات
+            openCartButton.addEventListener('click', showCartModal);
+            closeCartButton.addEventListener('click', hideCartModal);
+            cartModal.addEventListener('click', (e) => {
+                if (e.target === cartModal) { hideCartModal(); }
+            });
+
+            // **مستمعو أحداث الدفع الجديدة**
+            checkoutButton.addEventListener('click', showCheckoutModal); 
+            closeCheckoutButton.addEventListener('click', hideCheckoutModal);
+            document.getElementById('confirm-checkout-btn').addEventListener('click', handlePiCheckout); 
+            checkoutModal.addEventListener('click', (e) => {
+                if (e.target === checkoutModal) { hideCheckoutModal(); }
+            });
+
+            // جعل الدوال الهامة متاحة عالمياً
+            window.addToCart = addToCart;
+            window.updateCartItemQuantity = updateCartItemQuantity;
+            window.removeItemFromCart = removeItemFromCart;
+            window.showCheckoutModal = showCheckoutModal;
+        };
 
     </script>
     <style>
@@ -319,6 +666,7 @@
             --primary-color: #fcd34d; /* أصفر ذهبي فخم */
             --secondary-color: #1a1a1d; /* أسود غامق */
             --text-color: #f3f4f6; /* أبيض ناصع */
+            --green-accent: #4ade80; /* أخضر زاهي (tailwind-green-400) */
         }
         body {
             font-family: 'Cairo', sans-serif;
@@ -338,17 +686,6 @@
         .product-card:hover {
             box-shadow: 0 15px 30px rgba(0, 0, 0, 0.8);
         }
-        .add-to-cart-btn {
-            background-color: var(--primary-color);
-            color: #121212;
-            font-weight: 900;
-        }
-        .pi-icon {
-            font-size: 1.5rem;
-            color: var(--primary-color);
-            font-weight: 900;
-        }
-        /* تصميم زر القائمة العلوية لتفاصيل المستخدم */
         .user-menu-btn {
             background-color: #333;
             color: var(--primary-color);
@@ -377,34 +714,42 @@
         #ai-search-button {
             animation: pulse-yellow 2s infinite;
         }
+        
+        /* نمط المودال */
+        .modal {
+            background-color: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(4px);
+        }
     </style>
 </head>
 <body class="min-h-screen">
 
-    <!-- شريط التنقل العلوي الفخم -->
-    <header class="top-nav sticky top-0 z-50 shadow-2xl-dark">
+    
+<header class="top-nav sticky top-0 z-50 shadow-2xl-dark">
         <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
             
-            <!-- الشعار والاسم -->
-            <div class="flex items-center space-x-2 space-x-reverse">
-                <span class="text-3xl font-black pi-icon">π</span>
-                <span class="text-3xl font-black text-white">FORSALE</span>
+            
+<div class="flex items-center space-x-2 space-x-reverse">
+                
+<span class="text-3xl font-black">
+                    <span style="color: var(--green-accent);">For</span><span class="text-white">sale</span>
+                </span>
             </div>
 
-            <!-- زر المستخدم ورمز سلة المشتريات -->
-            <div class="flex items-center space-x-4 space-x-reverse">
+            
+<div class="flex items-center space-x-4 space-x-reverse">
                 
-                <!-- زر المستخدم (لإظهار الـ User ID - مهم للتتبع في Testnet) -->
-                <div class="user-menu-btn text-sm hidden md:block">
+                
+<div class="user-menu-btn text-sm hidden md:block">
                     مستخدم π: <span id="pi-user-id" class="font-light text-gray-400">تحميل...</span>
                 </div>
 
-                <!-- زر سلة المشتريات -->
-                <button class="text-white hover:text-yellow-400 transition relative p-2 rounded-full hover:bg-gray-700">
-                    <!-- أيقونة سلة المشتريات -->
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                    <!-- عدد العناصر في السلة (يتم تحديثه بـ JavaScript) -->
-                    <span id="cart-count" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full hidden">0</span>
+                
+<button id="open-cart-btn" class="text-white hover:text-yellow-400 transition relative p-2 rounded-full hover:bg-gray-700">
+                    
+<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    
+<span id="cart-count" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full hidden">0</span>
                 </button>
             </div>
         </div>
@@ -412,11 +757,11 @@
 
     <main class="container mx-auto px-4 sm:px-6 lg:px-8 mt-10">
 
-        <!-- صندوق رسائل النظام (Success/Error Messages) -->
-        <div id="message-box" style="display: none;" class="p-3 rounded-xl mb-4 text-center text-sm"></div>
+        
+<div id="message-box" style="display: none;" class="p-3 rounded-xl mb-4 text-center text-sm"></div>
 
-        <!-- قسم البحث والتصفية (أساس ميزة AI Search) -->
-        <section class="mb-10 p-6 bg-gray-900 rounded-3xl shadow-2xl-dark">
+        
+<section class="mb-10 p-6 bg-gray-900 rounded-3xl shadow-2xl-dark">
             <h2 class="text-3xl font-extrabold text-white mb-4 border-b border-gray-700 pb-2">البحث العالمي المدعوم بالذكاء الاصطناعي</h2>
             <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 sm:space-x-reverse">
                 <input type="text" id="ai-search-input" placeholder="اكتب للبحث في جميع الفئات (عقارات، سيارات، إلكترونيات...) - دع AI يجد أفضل صفقة لك!" class="flex-grow p-4 rounded-xl bg-gray-700 text-white border border-gray-600 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500 transition placeholder-gray-400" />
@@ -427,12 +772,18 @@
             <p class="mt-3 text-sm text-gray-400">البحث هنا سيعتمد على تحليل اللغة الطبيعية واختيار أفضل الصفقات بالذكاء الاصطناعي فقط، دون تدخل بشري.</p>
         </section>
 
-        <!-- شبكة عرض المنتجات الديناميكية -->
-        <section>
-            <h2 class="text-3xl font-extrabold text-white mb-6 border-b-4 border-yellow-500 pb-3 inline-block">صفقات عالمية مختارة بواسطة AI</h2>
+        
+<div id="ai-search-results" class="mb-10">
+            
+
+</div>
+
+        
+<section>
+            <h2 class="text-3xl font-extrabold text-white mb-6 border-b-4 border-yellow-500 pb-3 inline-block">صفقات عالمية مختارة</h2>
             <div id="product-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-                <!-- المنتجات سيتم إضافتها هنا بواسطة JavaScript و Firestore -->
-                <div class="col-span-full text-center p-8">
+                
+<div class="col-span-full text-center p-8">
                     <span class="animate-spin h-8 w-8 border-4 border-yellow-500 border-t-transparent rounded-full inline-block"></span>
                     <p class="mt-2 text-gray-400">تحميل المنتجات...</p>
                 </div>
@@ -440,27 +791,112 @@
         </section>
 
     </main>
+    
+    <!-- Modal سلة المشتريات -->
+    <div id="cart-modal" class="modal fixed inset-0 z-[100] hidden flex items-center justify-center p-4 transition-opacity duration-300">
+        <div class="bg-gray-800 rounded-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl transform transition-transform duration-300 scale-100 border-2 border-yellow-500">
+            
+            <!-- رأس المودال -->
+            <div class="p-6 border-b border-gray-700 flex justify-between items-center sticky top-0 bg-gray-800 rounded-t-2xl z-10">
+                <h3 class="text-3xl font-extrabold text-yellow-400 flex items-center">
+                    سلة المشتريات 
+                    <svg class="w-8 h-8 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                </h3>
+                <button id="close-cart-btn" class="text-gray-400 hover:text-white transition p-1 rounded-full hover:bg-gray-700">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <!-- محتوى السلة -->
+            <div id="cart-content" class="p-6 min-h-[100px]">
+                <!-- سيتم ملؤه بواسطة JavaScript -->
+            </div>
 
-    <!-- تذييل الصفحة الفخم المتوافق مع Pi Browser -->
-    <footer class="fixed bottom-0 left-0 right-0 bg-gray-900 border-t-2 border-yellow-500 shadow-2xl-dark z-50">
+            <!-- رسالة السلة الفارغة -->
+            <div id="empty-cart-message" class="text-center p-10 text-gray-400 hidden">
+                <svg class="w-16 h-16 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5m4 12h.01M17 12h.01M7 12h.01"></path></svg>
+                <p class="text-xl font-medium">سلة مشترياتك فارغة حاليًا.</p>
+                <p class="text-sm mt-1">ابدأ بالتسوق من الصفقات العالمية أدناه أو استخدم البحث بالذكاء الاصطناعي!</p>
+            </div>
+
+            <!-- ملخص السلة و زر الدفع -->
+            <div class="p-6 border-t-2 border-yellow-600 bg-gray-900 sticky bottom-0 rounded-b-2xl">
+                <div class="flex justify-between items-center text-2xl font-extrabold mb-4">
+                    <span class="text-white">الإجمالي المستحق:</span>
+                    <span class="text-yellow-400">
+                        <span id="cart-total">0.00</span> <span class="text-xl">π</span>
+                    </span>
+                </div>
+                <button id="checkout-btn" class="w-full bg-green-600 text-white font-extrabold py-3 rounded-xl hover:bg-green-500 transition shadow-xl disabled:bg-gray-500 disabled:cursor-not-allowed">
+                    المتابعة للدفع عبر Pi Network
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal الدفع (Checkout) **جديد** -->
+    <div id="checkout-modal" class="modal fixed inset-0 z-[110] hidden flex items-center justify-center p-4 transition-opacity duration-300">
+        <div class="bg-gray-800 rounded-2xl w-full max-w-md shadow-2xl transform transition-transform duration-300 scale-100 border-2 border-green-500">
+            
+            <!-- رأس المودال -->
+            <div class="p-6 border-b border-gray-700 flex justify-between items-center sticky top-0 bg-gray-800 rounded-t-2xl z-10">
+                <h3 class="text-3xl font-extrabold text-green-400 flex items-center">
+                    شاشة تأكيد الدفع 
+                    <svg class="w-8 h-8 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"></path></svg>
+                </h3>
+                <button id="close-checkout-btn" class="text-gray-400 hover:text-white transition p-1 rounded-full hover:bg-gray-700">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <!-- محتوى الدفع -->
+            <div class="p-6 text-center">
+                <p class="text-xl text-gray-300 mb-4">أنت على وشك إتمام دفع:</p>
+                <div class="bg-gray-700 p-4 rounded-xl mb-6 shadow-inner">
+                    <p class="text-4xl font-black text-green-400 mb-2">
+                        <span id="checkout-total-pi">0.00</span> <span class="text-2xl">π</span>
+                    </p>
+                    <p class="text-sm text-gray-400">لـ <span id="checkout-product-count">0</span> منتج في سلتك.</p>
+                </div>
+
+                <div class="text-left bg-gray-900 p-4 rounded-xl border border-gray-700 mb-6">
+                    <p class="text-lg font-bold text-white mb-2">تفاصيل المعاملة:</p>
+                    <ul class="text-sm text-gray-400 space-y-1">
+                        <li><span class="font-medium text-yellow-500">طريقة الدفع:</span> محفظة Pi Network (محاكاة)</li>
+                        <li><span class="font-medium text-yellow-500">رسوم المعاملة (AI):</span> 0.00 π (مستقبلاً)</li>
+                        <li><span class="font-medium text-yellow-500">حالة التطبيق:</span> لا مركزي - بدون تدخل بشري</li>
+                    </ul>
+                </div>
+
+                <button id="confirm-checkout-btn" class="w-full bg-green-600 text-white font-extrabold py-3 rounded-xl hover:bg-green-500 transition shadow-xl transform hover:scale-[1.02]">
+                    تأكيد الدفع وإتمام الطلب
+                </button>
+                <p class="text-xs text-gray-500 mt-3">بالنقر على "تأكيد"، يتم تسجيل طلبك وتفريغ سلة المشتريات.</p>
+            </div>
+        </div>
+    </div>
+
+
+    
+<footer class="fixed bottom-0 left-0 right-0 bg-gray-900 border-t-2 border-yellow-500 shadow-2xl-dark z-50">
         <div class="flex justify-around items-center h-16 text-xs text-gray-400">
-            <!-- الرئيسية -->
-            <a href="#" class="flex flex-col items-center hover:text-yellow-400 transition">
+            
+<a href="#" class="flex flex-col items-center hover:text-yellow-400 transition">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7m-7-7v12a4 4 0 004 4m-4-4a4 4 0 00-4 4"></path></svg>
                 الرئيسية
             </a>
-            <!-- منتجاتي (البائع) -->
-            <a href="#" class="flex flex-col items-center hover:text-yellow-400 transition">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            
+<a href="#" class="flex flex-col items-center hover:text-yellow-400 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M17 12h.01"></path></svg>
                 منتجاتي (البائع)
             </a>
-            <!-- تتبع الشحن AI -->
-            <a href="#" class="flex flex-col items-center hover:text-yellow-400 transition">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"></path></svg>
+            
+<a href="#" class="flex flex-col items-center hover:text-yellow-400 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M17 12h.01"></path></svg>
                 تتبع الشحن AI
             </a>
-            <!-- الدفع بـ Pi Coin (سلة المشتريات) -->
-            <a href="#" class="flex flex-col items-center hover:text-yellow-400 transition">
+            
+<a href="#" class="flex flex-col items-center hover:text-yellow-400 transition">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"></path></svg>
                 الدفع (π)
             </a>
