@@ -3,771 +3,453 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forsale - منصة البيع والشراء العالمية (Pi Hackathon)</title>
-    
+    <title>Forsale - سوق Pi المتكامل</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-    
-    <style>
-        /* الخطوط والخلفية */
-        body { font-family: 'Cairo', sans-serif; background-color: #1f2937; } /* bg-gray-800 */
-        .product-card { min-height: 480px; }
-        
-        /* تأثير النبض لزر AI */
-        @keyframes pulse-yellow {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(252, 211, 77, 0.7); }
-            50% { box-shadow: 0 0 0 10px rgba(252, 211, 77, 0); }
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'pi-yellow': '#FFD400',
+                        'pi-blue': '#0D1B2A',
+                        'pi-dark': '#000000',
+                        'pi-light': '#EFEFEF',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
         }
-        .ai-pulse { animation: pulse-yellow 2s infinite; }
-        
-        /* تخصيص الـ scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #374151; } /* bg-gray-700 */
-        ::-webkit-scrollbar-thumb { background: #fcd34d; border-radius: 10px; } /* yellow-400 */
-        ::-webkit-scrollbar-thumb:hover { background: #facc15; } /* yellow-500 */
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            background-color: #0D1B2A; /* Pi Blue background */
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            background-color: #1A2E44;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: 1px solid #FFD400;
+        }
+        .ai-card {
+            background-color: #2D3E50;
+        }
+        .ai-button {
+            transition: background-color 0.3s, transform 0.1s;
+        }
+        .ai-button:hover {
+            background-color: #e5c300;
+        }
+        .ai-button:active {
+            transform: scale(0.98);
+        }
+        .ai-button:disabled {
+            background-color: #555555;
+            cursor: not-allowed;
+        }
+        .product-card {
+            transition: transform 0.3s;
+        }
+        .product-card:hover {
+            transform: translateY(-5px);
+        }
     </style>
 </head>
+<body class="min-h-screen p-4 sm:p-8">
 
-<body class="bg-gray-900 text-white min-h-screen">
-
-    <div id="message-box" class="fixed top-0 inset-x-0 z-50 p-4 hidden"></div>
-
-    <header class="bg-gray-800 shadow-xl sticky top-0 z-40">
-        <div class="container mx-auto p-4 flex justify-between items-center">
-            <h1 class="text-3xl font-black">
+    <!-- Header Section -->
+    <header class="flex justify-between items-center mb-6">
+        <div class="text-3xl font-bold flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FFD400" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8 ml-2">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <path d="M16 10a4 4 0 0 1-4 4h0a4 4 0 0 1-4-4v0"></path>
+            </svg>
+            <!-- تصحيح ترتيب الكلمات لضمان (For=أخضر) ثم (sale=أبيض) حتى في تصميم RTL -->
+            <span dir="ltr" class="inline-flex">
                 <span class="text-green-400">For</span><span class="text-white">sale</span>
-            </h1>
-            <div class="flex items-center space-x-4 space-x-reverse">
-                
-                <button id="open-orders-btn" class="relative p-2 rounded-full bg-gray-700 hover:bg-yellow-500 hover:text-gray-900 transition" title="سجل الطلبات">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-                </button>
-                
-                <button id="open-cart-btn" class="relative p-2 rounded-full bg-yellow-500 text-gray-900 hover:bg-yellow-400 transition transform hover:scale-105" title="سلة المشتريات">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                    <span id="cart-count" class="absolute top-0 right-0 transform translate-x-1/2 -translate-y-1/2 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full hidden">0</span>
-                </button>
-            </div>
+            </span>
+        </div>
+        <div class="flex items-center space-x-4 space-x-reverse">
+            <button onclick="showCart()" class="text-pi-yellow hover:text-white transition duration-200">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="9" cy="21" r="1"></circle>
+                    <circle cx="20" cy="21" r="1"></circle>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                </svg>
+            </button>
+            <button onclick="showProfile()" class="text-pi-yellow hover:text-white transition duration-200">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+            </button>
         </div>
     </header>
 
-    <main class="container mx-auto p-6">
+    <!-- Auth Status Card -->
+    <div class="card p-3 rounded-xl mb-6 text-sm text-white flex flex-col sm:flex-row justify-between items-start sm:items-center">
+        <p><strong>حالة الاتصال بـ (Pi/Firebase):</strong> <span id="auth-status" class="text-yellow-400">جاري الاتصال...</span></p>
+        <p class="mt-2 sm:mt-0"><strong>معرف المستخدم (User ID):</strong> <span id="user-id" class="break-all text-gray-300 text-xs">...</span></p>
+    </div>
 
-        <div class="bg-gray-800 p-4 rounded-xl shadow-lg mb-6 text-sm text-gray-400">
-            <p>معرف المستخدم (Pi/Firebase): <span id="pi-user-id" class="font-mono text-yellow-400 break-all">...جاري الاتصال...</span></p>
-        </div>
+    <!-- AI Search Section -->
+    <div class="ai-card p-6 rounded-xl mb-8">
+        <h2 class="text-2xl font-bold text-center text-pi-yellow mb-2">البحث الذكي (AI Marketplace Agent)</h2>
+        <p class="text-center text-white text-opacity-80 mb-4 text-sm">صف ما تحتاجه وسيقوم الذكاء الاصطناعي (عبر محاكاة البحث) باقتراح أفضل صفقة لك مُسعّرة بالـ Pi (Pi Coin).</p>
 
-        <section class="mb-10 p-6 bg-gray-800 rounded-3xl shadow-2xl border-2 border-yellow-700">
-            <h2 class="text-3xl font-extrabold text-yellow-500 mb-4 flex items-center">
-                البحث الذكي (AI Marketplace Agent)
-                <span class="mr-2 text-xl text-yellow-400">(Gemini 2.5 Mock)</span>
-            </h2>
-            <p class="text-gray-400 mb-4">صف ما تحتاجه وسيقوم الذكاء الاصطناعي (عبر محاكاة البحث) باقتراح أفضل صفقة لك مسعّرة بالـ $\pi$ (Pi Coin).</p>
-
-            <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 sm:space-x-reverse">
-                <input type="text" id="ai-search-input" placeholder="مثال: شقة صغيرة بمواصفات صديقة للبيئة بسعر لا يتجاوز 500 $\pi$..." class="flex-grow p-3 rounded-xl bg-gray-700 border border-gray-600 text-white focus:ring-yellow-500 focus:border-yellow-500" dir="rtl">
-                <button id="ai-search-button" class="ai-pulse bg-yellow-500 text-gray-900 font-extrabold py-3 px-8 rounded-xl shadow-xl hover:bg-yellow-400 transition duration-300">
-                    بحث AI
-                </button>
-            </div>
+        <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 sm:space-x-reverse">
+            <input type="text" id="ai-search-input" placeholder="مثال: هاتف ذكي جديد يدعم 5G" 
+                    class="flex-grow p-3 rounded-lg border-2 border-pi-yellow bg-pi-blue text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pi-yellow">
             
-            <div id="ai-search-results" class="mt-6">
-                </div>
-        </section>
+            <button onclick="handleAISearch()" id="ai-search-button"
+                    class="ai-button bg-pi-yellow text-pi-dark font-bold py-3 px-6 rounded-lg shadow-lg">
+                بحث AI
+            </button>
+        </div>
 
-        <section>
-            <h2 class="text-3xl font-extrabold text-white mb-6">المنتجات المميزة عالمياً</h2>
-            <div id="product-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                </div>
-        </section>
-    </main>
+        <div id="ai-search-result" class="mt-4 p-4 rounded-lg bg-pi-dark text-white text-sm whitespace-pre-wrap hidden">
+            <!-- AI Results will be injected here -->
+        </div>
 
-    <div id="cart-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden z-50 overflow-y-auto">
-        <div class="flex items-start justify-center min-h-screen pt-12 p-4">
-            <div class="bg-gray-800 rounded-3xl shadow-2xl w-full max-w-lg p-6 transform transition-all">
-                <div class="flex justify-between items-center border-b border-gray-700 pb-4 mb-4">
-                    <h3 class="text-3xl font-black text-white">سلة المشتريات</h3>
-                    <button id="close-cart-btn" class="text-gray-400 hover:text-red-500">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
-                </div>
-                
-                <div id="cart-content" class="max-h-96 overflow-y-auto pr-2">
-                    </div>
-                
-                <p id="empty-cart-message" class="text-center text-gray-400 p-8 hidden">سلة المشتريات فارغة.</p>
+        <div id="ai-message" class="mt-4 p-2 rounded-lg bg-red-800 text-white text-xs hidden">
+            <!-- Error/Info messages will be injected here -->
+        </div>
+    </div>
+    
+    <!-- Products Section -->
+    <h2 class="text-3xl font-bold text-white mb-6 mt-10">المنتجات المميزة عالمياً</h2>
 
-                <div class="border-t border-gray-700 pt-4 mt-4">
-                    <div class="flex justify-between items-center mb-4">
-                        <span class="text-xl font-bold text-gray-300">الإجمالي الكلي:</span>
-                        <span class="text-4xl font-black text-yellow-500" dir="ltr">
-                            <span id="cart-total">0.00</span> $\pi$
-                        </span>
-                    </div>
-                    <button id="checkout-btn" class="w-full bg-yellow-500 text-gray-900 font-extrabold py-3 rounded-xl shadow-xl hover:bg-yellow-400 transition duration-300 disabled:opacity-50" disabled>
-                        إتمام عملية الدفع بواسطة Pi (محاكاة)
-                    </button>
-                </div>
-            </div>
+    <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Products will be injected here -->
+    </div>
+
+    <!-- System Message Modal -->
+    <div id="system-message-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden" onclick="hideSystemMessage()">
+        <div class="bg-pi-light p-6 rounded-xl w-full max-w-sm text-center shadow-2xl" onclick="event.stopPropagation()">
+            <h3 id="modal-title" class="text-xl font-bold mb-3 text-pi-dark"></h3>
+            <p id="modal-content" class="text-gray-700 mb-4"></p>
+            <button onclick="hideSystemMessage()" class="bg-pi-yellow hover:bg-yellow-400 text-pi-dark font-bold py-2 px-4 rounded-lg transition duration-200">إغلاق</button>
         </div>
     </div>
 
-    <div id="checkout-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden z-50 overflow-y-auto">
-        <div class="flex items-start justify-center min-h-screen pt-12 p-4">
-            <div class="bg-gray-900 border-4 border-green-600 rounded-3xl shadow-2xl w-full max-w-lg p-8 transform transition-all">
-                <div class="flex justify-between items-center border-b border-gray-700 pb-4 mb-6">
-                    <h3 class="text-3xl font-black text-green-500">تأكيد الدفع النهائي</h3>
-                    <button id="close-checkout-btn" class="text-gray-400 hover:text-red-500">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
-                </div>
-
-                <div class="text-center p-6 bg-gray-800 rounded-xl mb-6">
-                    <p class="text-gray-400 text-xl mb-2">ستقوم بدفع:</p>
-                    <p class="text-6xl font-black text-yellow-400" dir="ltr">
-                        <span id="checkout-total-pi">0.00</span> $\pi$
-                    </p>
-                    <p class="text-gray-500 mt-2">مقابل <span id="checkout-product-count" class="font-bold">0</span> منتجات.</p>
-                </div>
-
-                <p class="text-sm text-red-400 text-center p-3 bg-red-900/50 rounded-lg mb-6">
-                    **ملحوظة:** هذه العملية هي محاكاة (Mock) لبيئة الهاكثون. عملية تحويل $\pi$ الحقيقية تتطلب دمج Pi SDK.
-                </p>
-
-                <button id="confirm-checkout-btn" class="w-full bg-green-600 text-white font-extrabold py-4 rounded-xl shadow-2xl hover:bg-green-500 transition duration-300">
-                    تأكيد الدفع وتسجيل الطلب
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div id="orders-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden z-50 overflow-y-auto">
-        <div class="flex items-start justify-center min-h-screen pt-12 p-4">
-            <div class="bg-gray-800 rounded-3xl shadow-2xl w-full max-w-lg p-6 transform transition-all">
-                <div class="flex justify-between items-center border-b border-gray-700 pb-4 mb-4">
-                    <h3 class="text-3xl font-black text-yellow-500">سجل طلباتي</h3>
-                    <button id="close-orders-btn" class="text-gray-400 hover:text-red-500">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
-                </div>
-                
-                <div id="orders-content" class="max-h-96 overflow-y-auto pr-2">
-                    </div>
-                <p id="empty-orders-message" class="text-center text-gray-400 p-8 hidden">لم تقم بإجراء أي طلبات بعد.</p>
-            </div>
-        </div>
-    </div>
-
-
+    <!-- JavaScript and Firebase Setup -->
     <script type="module">
-        // استيراد مكتبات Firebase الأساسية
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, orderBy, getDocs, setLogLevel, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        // **ملاحظة:** تم إزالة استيراد مكتبة Gemini AI الأمامية لأسباب أمنية ولأنها تتطلب خادم وسيط.
-        // سيتم محاكاة وظيفة البحث باستخدام أداة البحث لدي (Gemini's Search Tool).
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // تعيين مستوى تسجيل الدخول لـ Firebase
-        setLogLevel('Debug');
-
-        // **متغيرات Firestoe الأساسية - يتم توفيرها بواسطة بيئة Pi App**
+        // إعداد Firebase (لا تقم بتعديل هذه المتغيرات الثابتة)
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        
-        // ----------------------------------------------------
-        // 1. تهيئة Firebase والمتغيرات الرئيسية
-        // ----------------------------------------------------
-        
-        let db = null;
-        let auth = null;
-        let userId = null;
-        let productsRef = null;
-        let cartRef = null;
-        let ordersRef = null; 
-        let cartData = []; // متغير لتخزين بيانات السلة محلياً
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        const initFirebase = async () => {
+        // متغيرات عامة
+        let app, db, auth, userId = null;
+
+        // ** بيانات تجريبية (Mock Data) لعرض المنتجات قبل جلب بيانات Firestore **
+        const MOCK_PRODUCTS = [
+            {
+                name: "هاتف Pi الذكي (الجيل الخامس)",
+                description: "أحدث هاتف ذكي يدعم شبكات الجيل الخامس (5G) مع كاميرا احترافية وشاشة OLED فائقة الوضوح. متوفر بضمان سنتين.",
+                price_in_pi: 85.50,
+                image_url: "https://placehold.co/400x300/FFD400/0D1B2A?text=هاتف+5G",
+                id: 'mock1'
+            },
+            {
+                name: "ساعة Pi الذكية (إصدار خاص)",
+                description: "ساعة ذكية أنيقة بتصميم رياضي، مزودة بمستشعرات للصحة واللياقة البدنية وعمر بطارية يدوم لأسبوع كامل. مقاومة للماء.",
+                price_in_pi: 12.75,
+                image_url: "https://placehold.co/400x300/0D1B2A/FFD400?text=ساعة+ذكية",
+                id: 'mock2'
+            },
+            {
+                name: "جهاز تعدين Pi صغير",
+                description: "جهاز صغير وخفيف الوزن، يعمل على تعزيز معدل تعدين Pi الخاص بك. سهل التوصيل عبر USB ولا يحتاج لإعدادات معقدة.",
+                price_in_pi: 3.99,
+                image_url: "https://placehold.co/400x300/1A2E44/FFD400?text=جهاز+تعدين",
+                id: 'mock3'
+            },
+            {
+                name: "كوب قهوة (شعار Pi)",
+                description: "كوب سيراميك فاخر يحمل شعار Pi، مثالي لبدء يومك بجرعة من الحماس. سعة 350 مل.",
+                price_in_pi: 0.15,
+                image_url: "https://placehold.co/400x300/FFD400/0D1B2A?text=كوب+قهوة",
+                id: 'mock4'
+            }
+        ];
+
+        // لتمكين تسجيلات الأخطاء في Firebase (مهم للتطوير)
+        setLogLevel('Debug');
+
+        // **************
+        // 1. تهيئة Firebase والمصادقة
+        // **************
+        window.onload = async () => {
             try {
-                if (Object.keys(firebaseConfig).length === 0) {
-                    console.error("Firebase config is missing. Cannot initialize Firestore.");
-                    document.getElementById('product-grid').innerHTML = '<div class="col-span-full text-center text-red-400 p-8">خطأ: لم يتم تهيئة Firebase. يرجى التأكد من توفر متغيرات البيئة.</div>';
-                    return;
-                }
-                
-                const app = initializeApp(firebaseConfig);
+                app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
-
-                // تسجيل الدخول (استخدام التوكن الخاص بـ Pi Network)
-                if (typeof __initial_auth_token !== 'undefined') {
-                    await signInWithCustomToken(auth, __initial_auth_token);
+                
+                // المصادقة باستخدام رمز Pi Custom Auth Token أو تسجيل الدخول كمجهول
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
                 } else {
-                    // تسجيل دخول مجهول للمحاكاة خارج بيئة Pi
-                    await signInAnonymously(auth); 
+                    await signInAnonymously(auth);
                 }
 
-                userId = auth.currentUser?.uid || crypto.randomUUID();
-                
-                // تعريف مسارات قواعد البيانات (باستخدام القواعد الأمنية لـ Pi App)
-                productsRef = collection(db, `/artifacts/${appId}/public/data/products`);
-                cartRef = collection(db, `/artifacts/${appId}/users/${userId}/cart`);
-                ordersRef = collection(db, `/artifacts/${appId}/users/${userId}/orders`); 
+                // مراقبة حالة المصادقة وتحديث الواجهة
+                onAuthStateChanged(auth, (user) => {
+                    const statusEl = document.getElementById('auth-status');
+                    const userIdEl = document.getElementById('user-id');
+                    
+                    if (user) {
+                        userId = user.uid;
+                        statusEl.textContent = 'متصل (مُصادَق)';
+                        statusEl.classList.remove('text-yellow-400', 'text-orange-400');
+                        statusEl.classList.add('text-green-400');
+                        userIdEl.textContent = userId;
 
-                console.log("Firebase Initialized. User ID:", userId);
-                document.getElementById('pi-user-id').textContent = userId;
-                
-                // بدء تحميل البيانات
-                loadProducts();
-                loadCart();
-                loadOrders(); // تحميل سجل الطلبات
+                        // عرض المنتجات التجريبية أولاً لتحسين تجربة المستخدم
+                        renderProducts(MOCK_PRODUCTS);
 
-            } catch (error) {
-                console.error("Error initializing Firebase:", error);
-                document.getElementById('product-grid').innerHTML = `<div class="col-span-full text-center text-red-400 p-8">خطأ في التهيئة: ${error.message}</div>`;
-            }
-        };
+                        // بمجرد المصادقة، ابدأ في جلب البيانات الحقيقية
+                        setupProductListener(); 
 
-        // ----------------------------------------------------
-        // 2. دالة عرض رسائل النظام
-        // ----------------------------------------------------
-        function showMessage(message, isError = false) {
-            const messageBox = document.getElementById('message-box');
-            messageBox.textContent = message;
-            messageBox.className = `fixed top-0 inset-x-0 z-50 p-4 text-center text-sm transition-all duration-300 ${isError ? 'bg-red-600 text-white shadow-lg' : 'bg-green-600 text-white shadow-lg'}`;
-            messageBox.style.display = 'block';
-            setTimeout(() => {
-                messageBox.style.display = 'none';
-            }, 4000);
-        }
-
-        // ----------------------------------------------------
-        // 3. دالة تحميل المنتجات والمنتجات الافتراضية
-        // ----------------------------------------------------
-        const addInitialProducts = async () => {
-             const initialProducts = [
-                { name: 'شقة فاخرة - دبي', description: 'حصص رقمية من عقارات فاخرة في دبي.', pricePi: 750.00, imageUrl: 'https://placehold.co/400x300/22c55e/ffffff?text=DUBAI', category: 'Real Estate' },
-                { name: 'سيارة Tesla Model 3', description: 'سيارة كهربائية جديدة بتفاوض AI.', pricePi: 500.00, imageUrl: 'https://placehold.co/400x300/3b82f6/ffffff?text=TESLA', category: 'Cars' },
-                { name: 'MacBook Pro M3 Max', description: 'لابتوب بأداء حاسوبي فائق.', pricePi: 120.50, imageUrl: 'https://placehold.co/400x300/f97316/ffffff?text=MACBOOK', category: 'Electronics' },
-                { name: 'رحلة إلى جزر المالديف', description: 'رحلة فاخرة لشخصين لمدة 7 أيام.', pricePi: 250.75, imageUrl: 'https://placehold.co/400x300/8b5cf6/ffffff?text=MALDIVES', category: 'Travel' },
-                { name: 'سبيكة ذهب عيار 24', description: 'سبيكة ذهب خالصة بوزن 10 جرام.', pricePi: 45.99, imageUrl: 'https://placehold.co/400x300/ca8a04/ffffff?text=GOLD', category: 'Luxury' }
-            ];
-
-            const snapshot = await getDocs(productsRef);
-            if (snapshot.empty) {
-                for (const product of initialProducts) {
-                    try {
-                        const docId = product.name.replace(/\s/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
-                        await setDoc(doc(productsRef, docId), { ...product, id: docId });
-                    } catch (e) {
-                        console.error(`Error adding initial product ${product.name}:`, e);
-                    }
-                }
-            }
-        };
-        
-        const loadProducts = () => {
-            if (!productsRef) return;
-
-            const productGrid = document.getElementById('product-grid');
-            productGrid.innerHTML = '<div class="col-span-full text-center p-8"><span class="animate-spin h-8 w-8 border-4 border-yellow-500 border-t-transparent rounded-full inline-block"></span> <p class="mt-2 text-gray-400">تحميل المنتجات...</p></div>';
-
-            onSnapshot(productsRef, (snapshot) => {
-                productGrid.innerHTML = ''; 
-                
-                if (snapshot.empty) {
-                    addInitialProducts(); // إضافة منتجات افتراضية إذا كانت فارغة
-                    return;
-                }
-
-                const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                products.sort((a, b) => a.name.localeCompare(b.name, 'ar'));
-                
-                products.forEach(product => {
-                    productGrid.appendChild(createProductCard(product));
-                });
-            }, (error) => {
-                console.error("Error getting products: ", error);
-                productGrid.innerHTML = '<div class="col-span-full text-center text-red-400 p-8">خطأ في تحميل المنتجات.</div>';
-            });
-        };
-
-        // ----------------------------------------------------
-        // 4. دالة إنشاء بطاقة المنتج العادي (UI)
-        // ----------------------------------------------------
-        function createProductCard(product) {
-            const card = document.createElement('div');
-            card.className = `product-card bg-gray-800 rounded-2xl shadow-2xl overflow-hidden transform transition duration-300 hover:scale-[1.02] cursor-pointer border-2 border-transparent hover:border-yellow-500`;
-            
-            let placeholderText = product.category || 'Product';
-            if (product.name) {
-                placeholderText = product.name.split(' ').slice(0, 2).join(' '); 
-            }
-            const imageUrl = product.imageUrl || `https://placehold.co/400x300/1f2937/fcd34d?text=${encodeURIComponent(placeholderText)}`;
-            
-            card.innerHTML = `
-                <img src="${imageUrl}" alt="${product.name}" class="w-full h-48 object-cover object-center" onerror="this.onerror=null;this.src='https://placehold.co/400x300/1f2937/fcd34d?text=${encodeURIComponent(product.category || 'صورة مفقودة')}'">
-                <div class="p-6">
-                    <h3 class="text-2xl font-extrabold text-white mb-2">${product.name}</h3>
-                    <p class="text-sm text-gray-400 h-12 overflow-hidden mb-4">${product.description}</p>
-                    <div class="flex justify-between items-center mt-4">
-                        <p class="text-xl font-black text-yellow-400">
-                            ${parseFloat(product.pricePi).toFixed(2)} <span class="text-lg font-bold">π</span>
-                        </p>
-                        <button class="add-to-cart-btn bg-yellow-500 text-gray-900 font-extrabold py-2 px-4 rounded-xl shadow-xl hover:bg-yellow-400 transition duration-200 text-sm transform hover:translate-y-[-2px]" data-product-id="${product.id}" data-name="${product.name}" data-price="${product.pricePi}">
-                            + إضافة للسلة
-                        </button>
-                    </div>
-                </div>
-            `;
-            
-            card.querySelector('.add-to-cart-btn').addEventListener('click', (e) => {
-                e.stopPropagation(); 
-                addToCart(product.id, product.name, product.pricePi);
-            });
-
-            return card;
-        }
-
-        // ----------------------------------------------------
-        // 5. دالة إضافة المنتج إلى سلة المشتريات (Firestore Logic)
-        // ----------------------------------------------------
-        const addToCart = async (productId, name, pricePi) => {
-            if (!cartRef) { showMessage('خطأ: لم يتم تهيئة سلة المشتريات.', true); return; }
-
-            try {
-                const itemDocRef = doc(cartRef, productId);
-                const itemSnap = await getDoc(itemDocRef);
-                const numericPricePi = parseFloat(pricePi);
-
-                if (isNaN(numericPricePi) || numericPricePi <= 0) {
-                    showMessage('خطأ: سعر المنتج غير صالح.', true);
-                    return;
-                }
-
-                if (itemSnap.exists()) {
-                    const data = itemSnap.data();
-                    const newQuantity = data.quantity + 1;
-                    await updateDoc(itemDocRef, {
-                        quantity: newQuantity,
-                        totalPricePi: newQuantity * numericPricePi,
-                        updatedAt: new Date().toISOString()
-                    });
-                } else {
-                    await setDoc(itemDocRef, {
-                        productId: productId,
-                        name: name,
-                        pricePi: numericPricePi,
-                        quantity: 1,
-                        totalPricePi: numericPricePi,
-                        addedAt: new Date().toISOString()
-                    });
-                }
-
-                showMessage(`تمت إضافة ${name} إلى السلة!`);
-                
-            } catch (e) {
-                console.error("Error adding to cart: ", e);
-                showMessage('خطأ في إضافة المنتج إلى السلة.', true);
-            }
-        };
-        
-        // دوال إدارة السلة (زيادة/نقصان/حذف)
-        const updateCartItemQuantity = async (productId, delta) => {
-            if (!cartRef) return;
-            try {
-                const itemDocRef = doc(cartRef, productId);
-                const itemSnap = await getDoc(itemDocRef);
-                if (itemSnap.exists()) {
-                    const data = itemSnap.data();
-                    const currentQuantity = data.quantity;
-                    const numericPricePi = data.pricePi;
-                    const newQuantity = currentQuantity + delta;
-                    if (newQuantity <= 0) {
-                        await deleteDoc(itemDocRef);
-                        showMessage(`${data.name} تم حذفه من السلة.`);
                     } else {
-                        await updateDoc(itemDocRef, {
-                            quantity: newQuantity,
-                            totalPricePi: newQuantity * numericPricePi,
-                            updatedAt: new Date().toISOString()
-                        });
+                        // في حال عدم وجود مصادقة (يجب ألا يحدث مع __initial_auth_token)
+                        userId = crypto.randomUUID(); // معرف عشوائي للمجهول
+                        statusEl.textContent = 'متصل (مجهول)';
+                        statusEl.classList.remove('text-yellow-400', 'text-green-400');
+                        statusEl.classList.add('text-orange-400');
+                        userIdEl.textContent = userId;
+                        
+                        // عرض المنتجات التجريبية أولاً لتحسين تجربة المستخدم
+                        renderProducts(MOCK_PRODUCTS);
+
+                        setupProductListener();
                     }
-                }
-            } catch (e) {
-                console.error("Error updating cart item quantity:", e);
-                showMessage('خطأ في تحديث كمية المنتج في السلة.', true);
+                });
+
+            } catch (error) {
+                console.error("Firebase Initialization Error:", error);
+                document.getElementById('auth-status').textContent = 'خطأ في الاتصال';
+                document.getElementById('auth-status').classList.add('text-red-500');
             }
         };
 
-        const removeItemFromCart = async (productId, name) => {
-            if (!cartRef) return;
-            try {
-                const itemDocRef = doc(cartRef, productId);
-                await deleteDoc(itemDocRef);
-                showMessage(`تم حذف ${name} بالكامل من السلة.`);
-            } catch (e) {
-                console.error("Error removing item from cart:", e);
-                showMessage('خطأ في إزالة المنتج من السلة.', true);
-            }
-        };
+        // **************
+        // 2. إدارة البيانات: المنتجات (عامة - Read-Only)
+        // **************
+        function getProductsCollectionPath() {
+            // مسار المجموعة العامة المشتركة
+            return `/artifacts/${appId}/public/data/products`;
+        }
 
-
-        // ----------------------------------------------------
-        // 6. دالة تحديث وعرض سلة المشتريات (onSnapshot)
-        // ----------------------------------------------------
-        const loadCart = () => {
-            if (!cartRef) return;
-            const cartCountElement = document.getElementById('cart-count');
-            const cartContentDiv = document.getElementById('cart-content');
-            const cartTotalSpan = document.getElementById('cart-total');
-            const checkoutButton = document.getElementById('checkout-btn');
-
-            onSnapshot(cartRef, (snapshot) => {
-                cartData = []; 
-                let totalItems = 0;
-                let totalPrice = 0;
-                cartContentDiv.innerHTML = '';
-
-                snapshot.docs.forEach(doc => {
-                    const item = { id: doc.id, ...doc.data() };
-                    cartData.push(item);
-                    totalItems += item.quantity || 0;
-                    totalPrice += item.totalPricePi || 0;
-                    cartContentDiv.appendChild(createCartItemElement(item));
+        function setupProductListener() {
+            // تأكد من تهيئة قاعدة البيانات قبل البدء
+            if (!db) return;
+            
+            const productsColRef = collection(db, getProductsCollectionPath());
+            
+            // الاستماع للتغييرات في الوقت الفعلي
+            onSnapshot(productsColRef, (snapshot) => {
+                const products = [];
+                snapshot.forEach(doc => {
+                    products.push({ id: doc.id, ...doc.data() });
                 });
                 
-                // تحديث الـ UI
-                cartCountElement.textContent = totalItems > 99 ? '99+' : totalItems;
-                if (totalItems > 0) {
-                    cartCountElement.classList.remove('hidden');
-                    cartTotalSpan.textContent = totalPrice.toFixed(2);
-                    checkoutButton.disabled = false;
-                    document.getElementById('empty-cart-message').classList.add('hidden');
-                } else {
-                    cartCountElement.classList.add('hidden');
-                    cartTotalSpan.textContent = '0.00';
-                    checkoutButton.disabled = true;
-                    document.getElementById('empty-cart-message').classList.remove('hidden');
+                // تحديث المنتجات بالبيانات الحقيقية إذا كانت موجودة
+                if (products.length > 0) {
+                    renderProducts(products);
+                } else if (document.getElementById('products-grid').children.length === 0) {
+                    // إذا لم يتم عرض أي شيء على الشاشة، اعرض رسالة عدم وجود منتجات
+                    // هذا يحمي من مسح المنتجات التجريبية إذا كان جلب Firestore بطيئًا
+                     document.getElementById('products-grid').innerHTML = '<p class="text-white text-center col-span-full">لا توجد منتجات متاحة حالياً في قاعدة البيانات. يتم عرض البيانات التجريبية تلقائياً عند التحميل.</p>';
                 }
 
             }, (error) => {
-                console.error("Error loading cart count:", error);
-                cartCountElement.textContent = '0';
-                cartCountElement.classList.add('hidden');
+                console.error("Error fetching products:", error);
+                showSystemMessage("خطأ في قاعدة البيانات", "فشل جلب المنتجات من Firestore. يرجى التحقق من القواعد.", "error");
             });
-        };
-        
-        // دالة إنشاء عنصر في سلة المشتريات داخل المودال (UI)
-        function createCartItemElement(item) {
-            const div = document.createElement('div');
-            div.className = 'flex items-center justify-between p-4 bg-gray-700 rounded-xl mb-3 shadow-md border-r-4 border-yellow-500';
-            div.innerHTML = `
-                <div class="flex-grow ml-3">
-                    <p class="text-white font-bold text-lg">${item.name}</p>
-                    <p class="text-sm text-gray-300">${item.pricePi.toFixed(2)} $\pi$ / للوحدة</p>
-                </div>
-                <div class="flex items-center space-x-3 space-x-reverse">
-                    <button class="qty-btn bg-red-600 hover:bg-red-500 text-white p-1 rounded-full w-6 h-6 flex items-center justify-center text-xl font-bold transition" data-id="${item.id}" data-delta="-1" title="تقليل الكمية"> − </button>
-                    <span class="text-white font-extrabold text-xl w-6 text-center">${item.quantity}</span>
-                    <button class="qty-btn bg-green-600 hover:bg-green-500 text-white p-1 rounded-full w-6 h-6 flex items-center justify-center text-xl font-bold transition" data-id="${item.id}" data-delta="1" title="زيادة الكمية"> + </button>
-                </div>
-                <div class="ml-4 text-left">
-                    <p class="text-xl font-black text-yellow-400">${item.totalPricePi.toFixed(2)} $\pi$</p>
-                </div>
-                <button class="remove-btn text-gray-400 hover:text-red-500 transition mr-2" data-id="${item.id}" data-name="${item.name}" title="إزالة من السلة">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                </button>
-            `;
-            
-            div.querySelectorAll('.qty-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const productId = e.currentTarget.getAttribute('data-id');
-                    const delta = parseInt(e.currentTarget.getAttribute('data-delta'));
-                    updateCartItemQuantity(productId, delta);
-                });
-            });
-
-            div.querySelector('.remove-btn').addEventListener('click', (e) => {
-                const productId = e.currentTarget.getAttribute('data-id');
-                const name = e.currentTarget.getAttribute('data-name');
-                removeItemFromCart(productId, name);
-            });
-
-            return div;
         }
 
-        // ----------------------------------------------------
-        // 7. دالة معالجة الدفع (محاكاة Pi Checkout)
-        // ----------------------------------------------------
-        const handlePiCheckout = async () => {
-            if (cartData.length === 0 || !ordersRef || !cartRef) {
-                showMessage("السلة فارغة أو هناك خطأ في التهيئة.", true);
+        function renderProducts(products) {
+            const grid = document.getElementById('products-grid');
+            grid.innerHTML = ''; // مسح المحتوى القديم
+
+            if (products.length === 0) {
+                grid.innerHTML = '<p class="text-white text-center col-span-full">لا توجد منتجات متاحة حالياً.</p>';
                 return;
             }
 
-            // تعطيل زر الدفع وإظهار التحميل
-            const confirmBtn = document.getElementById('confirm-checkout-btn');
-            const originalText = confirmBtn.innerHTML;
-            confirmBtn.disabled = true;
-            confirmBtn.innerHTML = '<span class="animate-spin h-5 w-5 border-4 border-t-transparent border-white rounded-full inline-block ml-2"></span> جاري معالجة الدفع...';
-            
-            const totalAmount = cartData.reduce((sum, item) => sum + (item.totalPricePi || 0), 0);
-
-            try {
-                // ** [ملاحظة الهاكثون] **: هذا هو المكان الذي يجب فيه دمج Pi SDK
-                showMessage(`جاري محاولة تحويل ${totalAmount.toFixed(2)} $\pi$ ... (محاكاة)`, false);
-                await new Promise(resolve => setTimeout(resolve, 3000)); // محاكاة التأخير
-                // ** [نهاية ملاحظة الهاكثون] **
-
-                // تسجيل الطلب في Firestore
-                const orderPayload = {
-                    userId: userId,
-                    totalPi: totalAmount,
-                    items: cartData.map(item => ({
-                        productId: item.productId,
-                        name: item.name,
-                        quantity: item.quantity,
-                        unitPricePi: item.pricePi,
-                        totalPricePi: item.totalPricePi
-                    })),
-                    status: 'Processing', 
-                    createdAt: new Date().toISOString()
-                };
-                await addDoc(ordersRef, orderPayload);
-                
-                // تفريغ سلة المشتريات باستخدام Batch Write (فعال ومضمون)
-                const batch = writeBatch(db);
-                const cartSnapshot = await getDocs(cartRef);
-                cartSnapshot.docs.forEach((docItem) => {
-                    batch.delete(docItem.ref);
-                });
-                await batch.commit();
-
-                hideCheckoutModal();
-                showMessage(`🎉 عملية دفع ناجحة! تم تسجيل الطلب بـ ${totalAmount.toFixed(2)} $\pi$.`, false);
-
-            } catch (error) {
-                console.error("Checkout Failed:", error);
-                showMessage("فشل في معالجة الدفع أو تسجيل الطلب. يرجى المحاولة مرة أخرى.", true);
-            } finally {
-                confirmBtn.disabled = false;
-                confirmBtn.innerHTML = originalText;
-            }
-        };
-
-        // ----------------------------------------------------
-        // 8. وظائف سجل الطلبات (Orders History) (تم إكمالها)
-        // ----------------------------------------------------
-        
-        function formatDate(isoString) {
-            try {
-                const date = new Date(isoString);
-                return date.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'});
-            } catch (e) {
-                return isoString;
-            }
-        }
-        
-        // دالة إنشاء عنصر في سجل الطلبات (تم إكمالها)
-        function createOrderItemElement(order) {
-            const div = document.createElement('div');
-            div.className = 'bg-gray-700 rounded-xl shadow-xl p-4 mb-3 border-r-4 border-green-500';
-            
-            const itemsList = order.items.map(item => `<li class="text-sm text-gray-300 mr-2">${item.name} (×${item.quantity}) - ${item.unitPricePi.toFixed(2)} $\pi$</li>`).join('');
-
-            div.innerHTML = `
-                <div class="flex justify-between items-start border-b border-gray-600 pb-2 mb-2">
-                    <p class="text-lg font-bold text-white">الطلب #${order.id.substring(0, 8)}</p>
-                    <p class="text-sm font-semibold ${order.status === 'Processing' ? 'text-yellow-400' : 'text-green-400'}">${order.status}</p>
-                </div>
-                <div class="text-sm text-gray-400 mb-2">
-                    <p>التاريخ: ${formatDate(order.createdAt)}</p>
-                    <p class="mt-1">المنتجات:</p>
-                    <ul class="list-disc pr-8">${itemsList}</ul>
-                </div>
-                <p class="text-right text-3xl font-black text-yellow-500 mt-3" dir="ltr">
-                    ${order.totalPi.toFixed(2)} $\pi$
-                </p>
-            `;
-            return div;
-        }
-        
-        // دالة تحميل سجل الطلبات (تم إكمالها)
-        const loadOrders = () => {
-            if (!ordersRef) return;
-            const ordersContentDiv = document.getElementById('orders-content');
-            const emptyOrdersMessage = document.getElementById('empty-orders-message');
-
-            const q = query(ordersRef, orderBy("createdAt", "desc"));
-
-            onSnapshot(q, (snapshot) => {
-                ordersContentDiv.innerHTML = '';
-                const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-                if (orders.length > 0) {
-                    emptyOrdersMessage.classList.add('hidden');
-                    orders.forEach(order => {
-                        ordersContentDiv.appendChild(createOrderItemElement(order));
-                    });
-                } else {
-                    emptyOrdersMessage.classList.remove('hidden');
-                }
-            }, (error) => {
-                console.error("Error loading orders:", error);
-                ordersContentDiv.innerHTML = '<p class="text-center text-red-400 p-8">خطأ في تحميل سجل الطلبات.</p>';
-                emptyOrdersMessage.classList.add('hidden');
+            products.forEach(product => {
+                const priceInPi = product.price_in_pi || 'N/A';
+                const html = `
+                    <div class="product-card card p-4 rounded-xl flex flex-col justify-between">
+                        <div>
+                            <img src="${product.image_url || 'https://placehold.co/400x300/1A2E44/FFFFFF?text=صورة+المنتج'}" 
+                                    onerror="this.onerror=null;this.src='https://placehold.co/400x300/1A2E44/FFFFFF?text=صورة+المنتج';"
+                                    alt="${product.name}" class="rounded-lg mb-4 w-full h-48 object-cover">
+                            <h3 class="text-lg font-semibold text-white mb-2">${product.name}</h3>
+                            <p class="text-gray-400 text-sm mb-4 line-clamp-3">${product.description}</p>
+                        </div>
+                        <div class="mt-4 flex justify-between items-center">
+                            <span class="text-xl font-bold text-pi-yellow">${priceInPi} Pi</span>
+                            <button onclick="mockBuy('${product.name}', ${priceInPi})"
+                                    class="bg-pi-yellow text-pi-dark font-semibold py-2 px-4 rounded-lg hover:bg-yellow-400 transition duration-200">
+                                شراء
+                            </button>
+                        </div>
+                    </div>
+                `;
+                grid.insertAdjacentHTML('beforeend', html);
             });
-        };
-
-        // ----------------------------------------------------
-        // 9. دالة محاكاة البحث الذكي (باستخدام أداة البحث لدي)
-        // ----------------------------------------------------
-        
-        function createAISuggestionCard(result) {
-            const card = document.createElement('div');
-            card.className = `bg-gray-700 p-4 rounded-xl shadow-lg mb-4 border-l-4 border-yellow-500`;
-            card.innerHTML = `
-                <h4 class="text-xl font-bold text-yellow-400 mb-1">اقتراح من AI: ${result.name}</h4>
-                <p class="text-gray-300 mb-2">${result.description}</p>
-                <p class="text-2xl font-black text-green-400">السعر المقترح: ${result.pricePi.toFixed(2)} $\pi$</p>
-                <button class="add-to-cart-ai-btn bg-yellow-500 text-gray-900 font-extrabold py-2 px-4 rounded-xl shadow-xl hover:bg-yellow-400 transition duration-200 mt-3 text-sm" 
-                    data-name="${result.name}" data-price="${result.pricePi}" data-id="${result.id}">
-                    + إضافة كمنتج مخصص
-                </button>
-            `;
-            card.querySelector('.add-to-cart-ai-btn').addEventListener('click', (e) => {
-                const name = e.currentTarget.getAttribute('data-name');
-                const price = e.currentTarget.getAttribute('data-price');
-                const id = e.currentTarget.getAttribute('data-id');
-                // نستخدم معرّف عشوائي مؤقت لمنتج AI غير موجود في قاعدة بيانات المنتجات الأصلية
-                addToCart(`ai_custom_${id}`, name, price); 
-                document.getElementById('ai-search-results').innerHTML = '';
-            });
-            return card;
         }
 
-        async function aiSearchSimulation(queryText) {
-            const resultsDiv = document.getElementById('ai-search-results');
-            const searchButton = document.getElementById('ai-search-button');
+        // **************
+        // 3. محاكاة الشراء (Pi Payments Mock)
+        // **************
+        window.mockBuy = (productName, price) => {
+            showSystemMessage("محاكاة عملية الشراء", `جارٍ تحويل ${price} Pi لشراء ${productName}. يجب هنا أن يتم فتح Pi Payments SDK.`, "info");
+            // هنا يجب أن يتم استدعاء Pi Payments SDK (خارج نطاق هذا الملف لبيئة الاختبار)
+            // Pi.createPayment(...)
+        }
 
-            if (!queryText.trim()) {
-                showMessage("الرجاء إدخال نص للبحث الذكي.", true);
-                return;
-            }
-
-            // عرض حالة التحميل
-            searchButton.disabled = true;
-            const originalButtonText = searchButton.innerHTML;
-            searchButton.innerHTML = '<span class="animate-spin h-5 w-5 border-4 border-t-transparent border-white rounded-full inline-block ml-2"></span> جاري البحث...';
-            resultsDiv.innerHTML = '';
+        // **************
+        // 4. وظائف واجهة المستخدم (Modal)
+        // **************
+        window.showSystemMessage = (title, content, type = "info") => {
+            const modal = document.getElementById('system-message-modal');
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-content').innerHTML = content;
             
-            try {
-                // محاكاة استدعاء الذكاء الاصطناعي (باستخدام أداة البحث لدي)
-                const searchResults = await google.search({ queries: [`${queryText} price in pi coin`] });
-                
-                // هنا يتم استخدام Gemini لتحليل نتائج البحث وتوليد اقتراح منتج
-                const mockResponse = {
-                    name: `صفقة AI لـ: ${queryText.substring(0, 30)}...`,
-                    description: `استنادًا إلى بحث الويب، يوصي AI بصفقة مخصصة لك. تحقق من وصف المنتج للمزيد من التفاصيل.`,
-                    pricePi: Math.floor(Math.random() * (700 - 50 + 1) + 50) + Math.round(Math.random() * 100) / 100, // سعر عشوائي بين 50 و 700
-                    id: Date.now()
-                };
-                
-                // عرض الاقتراح
-                resultsDiv.appendChild(createAISuggestionCard(mockResponse));
-                showMessage("تم العثور على اقتراح AI.", false);
-
-            } catch (error) {
-                console.error("AI Search Simulation failed:", error);
-                resultsDiv.innerHTML = '<p class="text-red-400 p-4">فشل البحث الذكي. ربما لم يتم توفير مفتاح API أو هناك مشكلة في الاتصال.</p>';
-            } finally {
-                searchButton.disabled = false;
-                searchButton.innerHTML = originalButtonText;
-            }
-        }
-
-        // ----------------------------------------------------
-        // 10. وظائف عرض وإخفاء المودال (UI Logic)
-        // ----------------------------------------------------
-        
-        function toggleModal(modalId, show) {
-            const modal = document.getElementById(modalId);
-            if (show) {
-                modal.classList.remove('hidden');
-                setTimeout(() => modal.querySelector('div.transform').classList.remove('scale-0'), 10);
+            const titleEl = document.getElementById('modal-title');
+            titleEl.classList.remove('text-red-600', 'text-green-600', 'text-pi-dark');
+            
+            if (type === 'error') {
+                titleEl.classList.add('text-red-600');
+            } else if (type === 'success') {
+                titleEl.classList.add('text-green-600');
             } else {
-                modal.classList.add('hidden');
-                modal.querySelector('div.transform').classList.add('scale-0');
+                 titleEl.classList.add('text-pi-dark');
             }
+            
+            modal.classList.remove('hidden');
         }
 
-        function showCartModal() {
-            toggleModal('cart-modal', true);
-        }
-        function hideCartModal() {
-            toggleModal('cart-modal', false);
-        }
-
-        function showCheckoutModal() {
-            const total = document.getElementById('cart-total').textContent;
-            const count = cartData.reduce((sum, item) => sum + item.quantity, 0);
-            
-            document.getElementById('checkout-total-pi').textContent = total;
-            document.getElementById('checkout-product-count').textContent = count;
-            
-            hideCartModal();
-            toggleModal('checkout-modal', true);
-        }
-        function hideCheckoutModal() {
-            toggleModal('checkout-modal', false);
+        window.hideSystemMessage = () => {
+            document.getElementById('system-message-modal').classList.add('hidden');
         }
         
-        function showOrdersModal() {
-            toggleModal('orders-modal', true);
-        }
-        function hideOrdersModal() {
-            toggleModal('orders-modal', false);
-        }
+        // **************
+        // 6. دوال أخرى للواجهة (يمكن إضافتها هنا)
+        // **************
+        window.showCart = () => { showSystemMessage("عربة التسوق", "هنا سيتم عرض المنتجات التي اخترتها للدفع عبر Pi."); }
+        window.showProfile = () => { showSystemMessage("ملفي الشخصي", "هنا ستعرض معلومات ملفك الشخصي وعمليات الشراء السابقة."); }
 
-
-        // ----------------------------------------------------
-        // 11. إضافة المستمعات للأحداث (Event Listeners)
-        // ----------------------------------------------------
+        // ***********************************************************************************
+        // ***********************************************************************************
+        // ** 5. وظيفة البحث الذكي (Gemini API) - تم نقلها إلى نهاية الكود لسهولة الوصول للمفتاح **
+        // ***********************************************************************************
+        // ***********************************************************************************
         
-        document.addEventListener('DOMContentLoaded', () => {
-            initFirebase();
-            
-            // سلة المشتريات
-            document.getElementById('open-cart-btn').addEventListener('click', showCartModal);
-            document.getElementById('close-cart-btn').addEventListener('click', hideCartModal);
-            
-            // الدفع
-            document.getElementById('checkout-btn').addEventListener('click', showCheckoutModal);
-            document.getElementById('close-checkout-btn').addEventListener('click', hideCheckoutModal);
-            document.getElementById('confirm-checkout-btn').addEventListener('click', handlePiCheckout);
+        let isSearchButtonEnabled = true; // متغير للتحكم في حالة الزر (Rate Limiting)
+        const RATE_LIMIT_MS = 5000; // 5 ثوانٍ كحد أدنى بين الطلبات (للحماية من الاستخدام المفرط)
 
-            // سجل الطلبات
-            document.getElementById('open-orders-btn').addEventListener('click', showOrdersModal);
-            document.getElementById('close-orders-btn').addEventListener('click', hideOrdersModal);
-
-            // البحث الذكي
-            document.getElementById('ai-search-button').addEventListener('click', () => {
-                const queryText = document.getElementById('ai-search-input').value;
-                aiSearchSimulation(queryText);
-            });
+        window.handleAISearch = async () => {
+            const query = document.getElementById('ai-search-input').value.trim();
+            const resultDiv = document.getElementById('ai-search-result');
+            const button = document.getElementById('ai-search-button');
+            const messageDiv = document.getElementById('ai-message');
             
-            // إغلاق المودال بالنقر خارجها
-            document.getElementById('cart-modal').addEventListener('click', (e) => {
-                if (e.target.id === 'cart-modal') hideCartModal();
-            });
-            document.getElementById('checkout-modal').addEventListener('click', (e) => {
-                if (e.target.id === 'checkout-modal') hideCheckoutModal();
-            });
-            document.getElementById('orders-modal').addEventListener('click', (e) => {
-                if (e.target.id === 'orders-modal') hideOrdersModal();
-            });
-        });
+            // تحقق من قيد معدل الطلبات
+            if (!isSearchButtonEnabled) {
+                messageDiv.textContent = "الرجاء الانتظار 5 ثوانٍ قبل البحث مرة أخرى لحماية المفتاح.";
+                messageDiv.classList.remove('hidden', 'bg-red-800');
+                messageDiv.classList.add('bg-yellow-700');
+                return;
+            }
+
+            if (!query) {
+                resultDiv.classList.add('hidden');
+                messageDiv.textContent = "الرجاء إدخال استعلام للبحث.";
+                messageDiv.classList.remove('hidden', 'bg-yellow-700');
+                messageDiv.classList.add('bg-red-800');
+                return;
+            }
+
+            // =================================================================================
+            // ** الخطوة الأخيرة والمباشرة لإضافة مفتاح الـ API **
+            // يرجى لصق مفتاحك هنا داخل علامات التنصيص:
+            const apiKey = ""; // <--- الصق مفتاح Gemini API هنا
+            // =================================================================================
+            
+            if (!apiKey) {
+                resultDiv.classList.add('hidden');
+                messageDiv.textContent = "فشل البحث الذكي. المفتاح غير متوفر. يرجى لصق مفتاح Gemini API المؤمَّن.";
+                messageDiv.classList.remove('hidden', 'bg-yellow-700');
+                messageDiv.classList.add('bg-red-800');
+                return;
+            }
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            const systemPrompt = `أنت خبير تسوق على شبكة Pi، مهمتك هي تحليل طلب المستخدم وتقديم نصيحة تسويقية مفصلة أو قائمة منتجات مقترحة. يجب أن تكون الإجابة بتنسيق Markdown. لا تتجاوز 150 كلمة. لا تستخدم علامات ترقيم (مثل علامات النجمة).`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: query }] }],
+                tools: [{ "google_search": {} }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+            };
+
+            // تفعيل قيد معدل الطلبات
+            isSearchButtonEnabled = false;
+            button.disabled = true;
+            button.textContent = 'جاري البحث...';
+            messageDiv.classList.add('hidden');
+            resultDiv.textContent = 'جاري البحث عن نتائج في الويب...';
+            resultDiv.classList.remove('hidden');
+
+            try {
+                // محاكاة لعملية البحث مع Gemini
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                // هنا يجب التعامل مع الأخطاء (مثل 403 Forbidden لو المفتاح غير صحيح أو غير مُقيّد)
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "لم يتم العثور على نتائج ذات صلة.";
+                
+                // تنظيف وإزالة علامات النجمة التي قد تتسبب في مشاكل تنسيق غير مرغوب فيها
+                const cleanText = text.replace(/\*/g, '').trim(); 
+                
+                resultDiv.textContent = cleanText;
+                resultDiv.classList.remove('hidden');
+
+            } catch (error) {
+                const apiKey = "AIzaSyAWsT-u3O3ZCp7m_fUsELlHjIMYA202zx0";
+                resultDiv.textContent = `حدث خطأ في الاتصال بالذكاء الاصطناعي: ${error.message}. إذا كان الخطأ 403، يرجى التحقق من المفتاح أو تقييد الموقع في Google Cloud.`;
+                resultDiv.classList.remove('hidden');
+            } finally {
+                // تعطيل الزر مؤقتاً لقيد معدل الطلبات
+                setTimeout(() => {
+                    isSearchButtonEnabled = true;
+                    button.disabled = false;
+                    button.textContent = 'بحث AI';
+                    messageDiv.classList.add('hidden');
+                }, RATE_LIMIT_MS);
+            }
+        };
     </script>
 </body>
 </html>
