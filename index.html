@@ -1,455 +1,877 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forsale - سوق Pi المتكامل</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'pi-yellow': '#FFD400',
-                        'pi-blue': '#0D1B2A',
-                        'pi-dark': '#000000',
-                        'pi-light': '#EFEFEF',
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                }
-            }
-        }
-    </script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <title>Forsale — AI Global Marketplace</title>
+    <meta name="application-name" content="Forsale - AI Global Marketplace" />
+    <meta name="description" content="Forsale — AI-first marketplace. Buy & sell anything with end-to-end AI automation. Powered by Pi Network AI (Testnet sim included)." />
+    <meta name="developer" content="Mohamed Awny (Blackstyle)" />
+    <meta name="email" content="mohamed.awny.00000@gmail.com" />
+    <meta name="pi-username" content="Blackstyle" />
+    <meta name="version" content="1.1.5" />
+    <meta name="release-year" content="2025" />
+    <meta name="powered-by" content="Pi Network AI" />
+    <meta name="deployment" content="Auto Testnet → Mainnet (simulated)" />
+    <meta name="customiz-verification" content="3ed6a43fb97d4f88f297e603916dce7c121d9e4ccdcc712649bc56578129510a2ef43c060d87a8f9c9ab878098be9dfa7409ca3b66c25d7d710bf10bccbb8c19">
+    <meta name="customiz-allowed-hosts" content="localhost,127.0.0.1,customiz.app,forsale.pi,pi.network">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        body {
-            background-color: #0D1B2A; /* Pi Blue background */
-            font-family: 'Inter', sans-serif;
+        /* Global Variables and Reset */
+        :root{
+            --pi-yellow:#FFD400;
+            --accent-green:#00FF7F;
+            --bg-1:#04090c;
+            --bg-2:#07121a;
+            --card:#0B2130;
+            --muted:#9CA3AF;
+            --text:#FFFFFF;
+            --radius:12px;
+            --maxw:1100px;
+            --shadow: 0 10px 30px rgba(0,0,0,0.6);
         }
-        .card {
-            background-color: #1A2E44;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border: 1px solid #FFD400;
+        *{box-sizing:border-box}
+        /* Using Inter and Cairo for Arabic font support */
+        html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg-2),var(--bg-1));color:var(--text);-webkit-font-smoothing:antialiased;font-family:Inter, system-ui, 'Cairo', sans-serif; font-size:16px}
+        body{padding:0;-webkit-text-size-adjust:100%}
+        .wrap{max-width:var(--maxw);margin:0 auto;padding:12px}
+        
+        /* Top Bar Styling */
+        header.topbar{position:sticky;top:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:0 0 12px 12px;background:var(--bg-2);border:1px solid rgba(255,255,255,0.03);box-shadow:var(--shadow);backdrop-filter: blur(6px);margin-bottom:10px}
+        .brand{display:flex;align-items:center;gap:12px}
+        .logo{width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,var(--pi-yellow),var(--accent-green));display:grid;place-items:center;color:#0D1B2A;font-weight:900;font-size:26px}
+        .brand-title{font-weight:900;font-size:21px}
+        .brand-sub{color:var(--muted);font-size:13px;margin-top:4px}
+        .controls{display:flex;gap:8px;align-items:center}
+        
+        /* Button Styling */
+        .btn{background:var(--pi-yellow);color:#0D1B2A;border:0;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:800;transition:background .2s}
+        .btn:hover:not([disabled]){filter:brightness(0.9)}
+        .ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--text);padding:8px 10px;border-radius:10px;cursor:pointer;font-weight:700;transition:border-color .2s}
+        .ghost:hover:not([disabled]){border-color:var(--pi-yellow)}
+        .ghost[disabled], .btn[disabled]{opacity:0.5;cursor:not-allowed}
+        
+        /* Layout Structure */
+        .content{display:flex;gap:14px}
+        @media(max-width:980px){ .content{flex-direction:column} }
+        .left{flex:1}
+        .right{width:360px}
+        @media(max-width:780px){ .right{width:100%} }
+        
+        /* Card Styling */
+        .card{background:linear-gradient(180deg,var(--card), #05131a);border-radius:12px;padding:14px;border:1px solid rgba(255,255,255,0.03);box-shadow:var(--shadow)}
+        /* Category Scroll */
+        .cats{display:flex;gap:10px;overflow-x:auto;padding:8px 6px;scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
+        .cat{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,0.03);background:rgba(255,255,255,0.01);min-width:110px;cursor:pointer;font-size:14px;transition:all .15s}
+        .cat:hover{background:rgba(255,255,255,0.05);}
+        .cat.active{border-color:var(--pi-yellow);box-shadow:0 6px 18px rgba(255,212,0,0.08);background:rgba(255,212,0,0.1);}
+        
+        /* Search Bar */
+        .search-row{display:flex;gap:8px;align-items:center;margin-top:12px}
+        .search-row input{flex:1;padding:12px;border-radius:10px;background:transparent;color:var(--text);outline:none;border:2px solid transparent;box-shadow:0 0 5px rgba(255,212,0,0.12);font-size:16px;transition:border-color .2s}
+        .search-row input:focus{border-color:var(--pi-yellow)}
+        .mic{padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--pi-yellow);cursor:pointer;transition:background .2s}
+        .mic:hover{background:rgba(255,255,255,0.05);}
+        
+        /* Product Grid */
+        .products{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:14px}
+        @media(max-width:720px){ .products{grid-template-columns:repeat(1,1fr)} }
+        .product{border-radius:12px;padding:12px;background:linear-gradient(180deg,#0d2a35,#07121a);border:1px solid rgba(255,255,255,0.02);transition:transform .18s;cursor:pointer}
+        .product:hover{transform:translateY(-6px)}
+        .product img{width:100%;height:140px;object-fit:cover;border-radius:10px}
+        .product .title{font-weight:900;margin-top:8px;line-height:1.3}
+        .product .desc{color:var(--muted);margin-top:6px;line-height:1.4}
+        .price{font-weight:900;color:var(--pi-yellow)}
+        
+        /* Sort Control */
+        .sort-row{display:flex;align-items:center;justify-content:space-between;margin-top:14px;margin-bottom:14px;font-size:15px}
+        .sort-control select{background:var(--card);color:var(--text);padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);appearance:none;cursor:pointer}
+        
+        /* Modals */
+        .modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:200;visibility:hidden;opacity:0;transition:opacity .18s,visibility .18s}
+        .modal.show{visibility:visible;opacity:1}
+        .modal .box{background:#0b1518;color:var(--text);padding:16px;border-radius:12px;width:90%;max-width:920px;box-shadow:0 20px 60px rgba(0,0,0,0.6);transform:scale(0.95);transition:transform .2s}
+        .modal.show .box{transform:scale(1)}
+        .modal img{width:100%;height:400px;object-fit:cover;border-radius:10px;margin-bottom:16px}
+        
+        /* Chat Styling */
+        .chat-body{max-height:360px;overflow:auto;padding:8px;border-radius:8px;margin-bottom:8px;display:flex;flex-direction:column}
+        .chat-bubble{max-width:85%;padding:10px 14px;border-radius:16px;margin-bottom:8px;font-size:15px;line-height:1.4;word-wrap:break-word;}
+        .chat-bubble.user{background:var(--pi-yellow);color:#07121a;margin-left:auto;border-bottom-left-radius:4px;}
+        .chat-bubble.ai{background:#20313a;color:#fff;margin-right:auto;border-bottom-right-radius:4px;}
+        .chat-controls{display:flex;gap:8px;margin-top:8px}
+        .chat-send-btn{background:#00FF7F;color:#0D1B2A;border:0;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:700}
+        .chat-controls input{flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text);font-size:16px}
+        
+        /* Log Panel */
+        .log{max-height:220px;overflow:auto;padding:10px;background:#06121a;border-radius:8px;color:var(--muted);font-size:14px}
+        
+        /* Footer */
+        footer{margin-top:20px;padding:18px 0;text-align:center;color:var(--muted);font-size:14px}
+        
+        /* RTL & Responsiveness adjustments */
+        [dir="rtl"] #mainTitle { font-size:22px }
+        [dir="rtl"] #mainSub { font-size:15px;color:var(--muted)}
+        @media(max-width:420px){
+            .logo{width:56px;height:56px;font-size:22px}
+            header.topbar{padding:8px}
         }
-        .ai-card {
-            background-color: #2D3E50;
+        
+        /* Hide buttons in modal */
+        .modal .action-buttons {
+            display: none;
         }
-        .ai-button {
-            transition: background-color 0.3s, transform 0.1s;
+        
+        /* Adjust modal content layout */
+        .modal .product-details {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
-        .ai-button:hover {
-            background-color: #e5c300;
+        
+        .modal .product-info {
+            flex: 1;
         }
-        .ai-button:active {
-            transform: scale(0.98);
-        }
-        .ai-button:disabled {
-            background-color: #555555;
-            cursor: not-allowed;
-        }
-        .product-card {
-            transition: transform 0.3s;
-        }
-        .product-card:hover {
-            transform: translateY(-5px);
+        
+        .modal .product-price {
+            font-weight: 900;
+            color: var(--pi-yellow);
+            font-size: 24px;
+            margin-top: 8px;
         }
     </style>
 </head>
-<body class="min-h-screen p-4 sm:p-8">
-
-    <!-- Header Section -->
-    <header class="flex justify-between items-center mb-6">
-        <div class="text-3xl font-bold flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FFD400" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8 ml-2">
-                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-                <line x1="3" y1="6" x2="21" y2="6"></line>
-                <path d="M16 10a4 4 0 0 1-4 4h0a4 4 0 0 1-4-4v0"></path>
-            </svg>
-            <!-- تصحيح ترتيب الكلمات لضمان (For=أخضر) ثم (sale=أبيض) حتى في تصميم RTL -->
-            <span dir="ltr" class="inline-flex">
-                <span class="text-green-400">For</span><span class="text-white">sale</span>
-            </span>
-        </div>
-        <div class="flex items-center space-x-4 space-x-reverse">
-            <button onclick="showCart()" class="text-pi-yellow hover:text-white transition duration-200">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="9" cy="21" r="1"></circle>
-                    <circle cx="20" cy="21" r="1"></circle>
-                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                </svg>
-            </button>
-            <button onclick="showProfile()" class="text-pi-yellow hover:text-white transition duration-200">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-            </button>
-        </div>
-    </header>
-
-    <!-- Auth Status Card -->
-    <div class="card p-3 rounded-xl mb-6 text-sm text-white flex flex-col sm:flex-row justify-between items-start sm:items-center">
-        <p><strong>حالة الاتصال بـ (Pi/Firebase):</strong> <span id="auth-status" class="text-yellow-400">جاري الاتصال...</span></p>
-        <p class="mt-2 sm:mt-0"><strong>معرف المستخدم (User ID):</strong> <span id="user-id" class="break-all text-gray-300 text-xs">...</span></p>
-    </div>
-
-    <!-- AI Search Section -->
-    <div class="ai-card p-6 rounded-xl mb-8">
-        <h2 class="text-2xl font-bold text-center text-pi-yellow mb-2">البحث الذكي (AI Marketplace Agent)</h2>
-        <p class="text-center text-white text-opacity-80 mb-4 text-sm">صف ما تحتاجه وسيقوم الذكاء الاصطناعي (عبر محاكاة البحث) باقتراح أفضل صفقة لك مُسعّرة بالـ Pi (Pi Coin).</p>
-
-        <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 sm:space-x-reverse">
-            <input type="text" id="ai-search-input" placeholder="مثال: هاتف ذكي جديد يدعم 5G" 
-                    class="flex-grow p-3 rounded-lg border-2 border-pi-yellow bg-pi-blue text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pi-yellow">
+<body>
+    <div class="wrap">
+        <div id="verificationBanner" style="margin-bottom:8px;padding:8px 12px;border-radius:10px;background:rgba(255,255,255,0.02);color:var(--muted)" data-ar="جارٍ التحقق..." data-en="Verifying...">جارٍ التحقق...</div>
+        
+        <header class="topbar" role="banner" aria-label="Header">
+            <div class="brand" style="gap:10px">
+                <div class="logo" aria-hidden="true">F</div>
+                <div>
+                    <div class="brand-title" id="brandTitle">Forsale</div>
+                    <div class="brand-sub" id="brandSub" data-ar="AI Smart Marketplace • Global-ready" data-en="AI Smart Marketplace • Global-ready">AI Smart Marketplace • Global-ready</div>
+                </div>
+            </div>
             
-            <button onclick="handleAISearch()" id="ai-search-button"
-                    class="ai-button bg-pi-yellow text-pi-dark font-bold py-3 px-6 rounded-lg shadow-lg">
-                بحث AI
-            </button>
+            <div class="controls" role="navigation" aria-label="Controls">
+                <button id="langToggleTop" class="ghost" title="Toggle language">EN</button>
+                <button id="connectBtn" class="ghost" title="Connect to Pi" data-ar="اتصال" data-en="Connect">Connect</button>
+                <button id="netBtn" class="ghost" title="Toggle network">Testnet</button>
+            </div>
+        </header>
+        
+        <div class="content">
+            <div class="left">
+                <div class="card">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <div>
+                            <h2 id="mainTitle" style="margin:0" data-ar="السوق الذكي" data-en="AI Smart Marketplace">السوق الذكي</h2>
+                            <div id="mainSub" class="muted" data-ar="من الاكتشاف حتى الاستلام — بالكامل بالذكاء الاصطناعي" data-en="From discovery to delivery — fully AI-powered">من الاكتشاف حتى الاستلام — بالكامل بالذكاء الاصطناعي</div>
+                        </div>
+                        <div id="userInfo" class="muted" style="text-align:right">
+                            <div class="username-text" data-ar="غير متصل" data-en="Disconnected">غير متصل</div>
+                            <div class="balance-text muted"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="cats" id="cats" aria-label="Categories" style="margin-top:12px"></div>
+                    
+                    <div class="search-row">
+                        <input id="search" data-ar="ابحث: مثال 'تويوتا' أو 'هاتف'" data-en="Search: e.g. 'Toyota' or 'phone'" placeholder="ابحث: مثال 'تويوتا' أو 'هاتف'">
+                        <button id="voiceSearchBtn" class="mic" title="بحث صوتي">🎙️</button>
+                    </div>
+                    
+                    <div class="sort-row">
+                        <div style="display:flex;align-items:center">
+                            <div id="sortLabel" style="font-weight:700;margin-right:12px" data-ar="فرز حسب:" data-en="Sort by:">فرز حسب:</div>
+                            <div class="sort-control">
+                                <select id="sortSelect">
+                                    <option value="default" data-ar="الافتراضي (الأحدث)" data-en="Default (Latest)">الافتراضي (الأحدث)</option>
+                                    <option value="rating_desc" data-ar="الأعلى تقييماً" data-en="Top Rated">الأعلى تقييماً</option>
+                                    <option value="price_asc" data-ar="الأقل سعراً" data-en="Lowest Price">الأقل سعراً</option>
+                                    <option value="price_desc" data-ar="الأعلى سعراً" data-en="Highest Price">الأعلى سعراً</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button id="logyBtn" title="اسأل Logy: توصية AI" data-ar="🤖 اسأل Logy" data-en="🤖 Ask Logy">🤖 اسأل Logy</button>
+                    </div>
+                    
+                    <div id="productList" class="products" aria-live="polite"></div>
+                </div>
+                
+                <div style="margin-top:14px" class="card">
+                    <h3 style="margin:0" data-ar="سجل الأحداث" data-en="Transaction Log">سجل الأحداث</h3>
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <div id="txLog" class="log" style="margin-top:10px"></div>
+                    </div>
+                    
+                    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+                        <button id="clearLogs" class="ghost" data-ar="تفريغ" data-en="Clear">تفريغ</button>
+                        <button id="exportBtn" class="ghost" data-ar="تصدير" data-en="Export" disabled>تصدير</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="right">
+                <div class="card">
+                    <h3 id="cartTitle" style="margin:0" data-ar="عربة التسوق" data-en="Shopping Cart">عربة التسوق</h3>
+                    <div id="cartArea" style="margin-top:12px"></div>
+                    
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">
+                        <div class="muted" id="cartTotal" data-ar="المجموع:" data-en="Total:">المجموع: 0 Pi</div>
+                        <div><button id="checkoutBtn" class="btn" disabled data-ar="دفع (Testnet)" data-en="Pay (Testnet)">دفع (Testnet)</button></div>
+                    </div>
+                    
+                    <hr style="border:none;border-top:1px solid rgba(255,255,255,0.04);margin-top:12px">
+                    <div class="muted" style="font-weight:700;" data-ar="تحليلات AI" data-en="AI Analytics">تحليلات AI</div>
+                    <div id="aiPanel" style="margin-top:8px" class="muted">
+                         <span class="ai-intent" data-ar="نوايا: —" data-en="Intent: —">نوايا: —</span><br>
+                         <span class="ai-rec" data-ar="توصية: —" data-en="Recommendation: —">توصية: —</span>
+                    </div>
+                </div>
+                
+                <div style="margin-top:12px" class="card">
+                    <h3 style="margin:0" data-ar="المطور" data-en="Developer">المطور</h3>
+                    <div class="muted" style="margin-top:8px">
+                        Mohamed Awny (Blackstyle)<br>mohamed.awny.00000@gmail.com
+                    </div>
+                </div>
+            </div>
         </div>
-
-        <div id="ai-search-result" class="mt-4 p-4 rounded-lg bg-pi-dark text-white text-sm whitespace-pre-wrap hidden">
-            <!-- AI Results will be injected here -->
-        </div>
-
-        <div id="ai-message" class="mt-4 p-2 rounded-lg bg-red-800 text-white text-xs hidden">
-            <!-- Error/Info messages will be injected here -->
+        
+        <footer>
+            <div style="font-weight:800">Forsale</div>
+            <div class="muted">Forsale — Powered by Pi Network AI</div>
+        </footer>
+    </div>
+    
+    <div class="modal" id="productModal" aria-hidden="true">
+        <div class="box" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <div style="font-weight:900" id="modalTitle" data-ar="تفاصيل المنتج" data-en="Product Details">تفاصيل المنتج</div>
+                <div><button id="closeModal" class="ghost" data-ar="إغلاق" data-en="Close">إغلاق</button></div>
+            </div>
+            <div class="product-details">
+                <img id="modalImg" src="" alt="">
+                <div class="product-info">
+                    <div style="font-weight:900" id="modalName"></div>
+                    <div class="muted" id="modalDesc" style="margin-top:6px"></div>
+                    <div class="product-price" id="modalPrice"></div>
+                </div>
+            </div>
         </div>
     </div>
     
-    <!-- Products Section -->
-    <h2 class="text-3xl font-bold text-white mb-6 mt-10">المنتجات المميزة عالمياً</h2>
-
-    <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Products will be injected here -->
-    </div>
-
-    <!-- System Message Modal -->
-    <div id="system-message-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden" onclick="hideSystemMessage()">
-        <div class="bg-pi-light p-6 rounded-xl w-full max-w-sm text-center shadow-2xl" onclick="event.stopPropagation()">
-            <h3 id="modal-title" class="text-xl font-bold mb-3 text-pi-dark"></h3>
-            <p id="modal-content" class="text-gray-700 mb-4"></p>
-            <button onclick="hideSystemMessage()" class="bg-pi-yellow hover:bg-yellow-400 text-pi-dark font-bold py-2 px-4 rounded-lg transition duration-200">إغلاق</button>
+    <div class="modal" id="logyModal" aria-hidden="true">
+        <div class="box" role="dialog" aria-modal="true">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <div style="font-weight:900" data-ar="Logy — مساعد الذكاء الاصطناعي" data-en="Logy — AI Assistant">Logy — مساعد الذكاء الاصطناعي</div>
+                <div><button id="closeLogy" class="ghost" data-ar="إغلاق" data-en="Close">إغلاق</button></div>
+            </div>
+            <div id="logyBody" class="chat-body"><div class="chat-bubble ai initial-ai-msg" data-ar="مرحبًا! اسألني عن توصيات أو اطلب مساعدة." data-en="Hello! Ask me for recommendations or help.">مرحبًا! اسألني عن توصيات أو اطلب مساعدة.</div></div>
+            <div class="chat-controls">
+                <input id="logyInput" data-ar="اكتب سؤالك..." data-en="Type your question..." placeholder="اكتب سؤالك..." />
+                <button id="logySend" class="chat-send-btn" data-ar="ارسال" data-en="Send">ارسال</button>
+            </div>
+            <div style="margin-top:8px"><small class="muted"><span class="log-label" data-ar="سجل:" data-en="Log:">سجل:</span> <span id="logyStatus" data-ar="جاهز" data-en="Ready">جاهز</span></small></div>
         </div>
     </div>
+    
+    <div id="toast" style="position:fixed;left:12px;top:12px;background:var(--accent-green);color:#031617;padding:8px 12px;border-radius:8px;display:none;z-index:999">Ready</div>
+    
+<script>
+/* Full frontend implementation (self-contained).
+   - Includes full Cart logic, Pi SDK simulation, and AI chat mock-up.
+   - FIXED: Dynamic language switching without page reload.
+*/
+(function(){
 
-    <!-- JavaScript and Firebase Setup -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    'use strict';
 
-        // إعداد Firebase (لا تقم بتعديل هذه المتغيرات الثابتة)
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+    // -------------------------
+    // Data (Product & Categories)
+    // -------------------------
 
-        // متغيرات عامة
-        let app, db, auth, userId = null;
+    const TRANSLATIONS = {
+        'connectBtn': {ar: 'اتصال', en: 'Connect'},
+        'netBtnMain': {ar: 'Mainnet', en: 'Mainnet'},
+        'netBtnTest': {ar: 'Testnet', en: 'Testnet'},
+        'disconnected': {ar: 'غير متصل', en: 'Disconnected'},
+        'total': {ar: 'المجموع', en: 'Total'},
+        'pay': {ar: 'دفع', en: 'Pay'},
+        'add_to_cart': {ar: 'أضف للعربة', en: 'Add to Cart'},
+        'chat_with_logy': {ar: 'تحدث مع Logy', en: 'Chat with Logy'},
+    };
 
-        // ** بيانات تجريبية (Mock Data) لعرض المنتجات قبل جلب بيانات Firestore **
-        const MOCK_PRODUCTS = [
-            {
-                name: "هاتف Pi الذكي (الجيل الخامس)",
-                description: "أحدث هاتف ذكي يدعم شبكات الجيل الخامس (5G) مع كاميرا احترافية وشاشة OLED فائقة الوضوح. متوفر بضمان سنتين.",
-                price_in_pi: 85.50,
-                image_url: "https://placehold.co/400x300/FFD400/0D1B2A?text=هاتف+5G",
-                id: 'mock1'
-            },
-            {
-                name: "ساعة Pi الذكية (إصدار خاص)",
-                description: "ساعة ذكية أنيقة بتصميم رياضي، مزودة بمستشعرات للصحة واللياقة البدنية وعمر بطارية يدوم لأسبوع كامل. مقاومة للماء.",
-                price_in_pi: 12.75,
-                image_url: "https://placehold.co/400x300/0D1B2A/FFD400?text=ساعة+ذكية",
-                id: 'mock2'
-            },
-            {
-                name: "جهاز تعدين Pi صغير",
-                description: "جهاز صغير وخفيف الوزن، يعمل على تعزيز معدل تعدين Pi الخاص بك. سهل التوصيل عبر USB ولا يحتاج لإعدادات معقدة.",
-                price_in_pi: 3.99,
-                image_url: "https://placehold.co/400x300/1A2E44/FFD400?text=جهاز+تعدين",
-                id: 'mock3'
-            },
-            {
-                name: "كوب قهوة (شعار Pi)",
-                description: "كوب سيراميك فاخر يحمل شعار Pi، مثالي لبدء يومك بجرعة من الحماس. سعة 350 مل.",
-                price_in_pi: 0.15,
-                image_url: "https://placehold.co/400x300/FFD400/0D1B2A?text=كوب+قهوة",
-                id: 'mock4'
+    const CATEGORIES = [
+        {key:'all', icon:'fa-th-large', ar:'الكل', en:'All'},
+        {key:'cars', icon:'fa-car-side', ar:'سيارات', en:'Cars'},
+        {key:'real', icon:'fa-building', ar:'عقارات', en:'Real Estate'},
+        {key:'electronics', icon:'fa-microchip', ar:'إلكترونيات', en:'Electronics'},
+        {key:'fashion', icon:'fa-tshirt', ar:'أزياء', en:'Fashion'},
+        {key:'home', icon:'fa-house-chimney', ar:'منزل', en:'Home'},
+        {key:'services', icon:'fa-hands', ar:'خدمات', en:'Services'}
+    ];
+
+
+    const PRODUCTS = [
+        {id:'p1',cat:'cars', name_ar:'تويوتا كورولا 2018', name_en:'Toyota Corolla 2018', desc_ar:'حالة ممتازة • 120 ألف كم', desc_en:'Excellent • 120k km', price:120000, img:'https://placehold.co/800x600/FFD400/0D1B2A?text=Corolla', rating:4.3, created:'2025-01-10'},
+        {id:'p2',cat:'electronics', name_ar:'هاتف Pi الذكي', name_en:'Pi Smart Phone', desc_ar:'5G • شاشة OLED • كاميرا AI', desc_en:'5G • OLED • AI Camera', price:85.5, img:'https://placehold.co/800x600/0D1B2A/FFD400?text=Phone', rating:4.7, created:'2025-02-04'},
+        {id:'p3',cat:'electronics', name_ar:'ساعة Pi', name_en:'Pi Smart Watch', desc_ar:'لياقة • 7 أيام بطارية', desc_en:'Fitness • 7-day battery', price:12.75, img:'https://placehold.co/800x600/1A2E44/FFD400?text=Watch', rating:4.1, created:'2025-03-01'},
+        {id:'p4',cat:'real', name_ar:'شقة 120م بالزمالك', name_en:'120m Apartment in Zamalek', desc_ar:'مفروشة • موقع مميز', desc_en:'Furnished • Prime location', price:21000, img:'https://placehold.co/800x600/08121a/FFD400?text=Apartment', rating:4.6, created:'2025-01-20'},
+        {id:'p5',cat:'fashion', name_ar:'جاكيت جلد', name_en:'Leather Jacket', desc_ar:'جلد طبيعي • جديد', desc_en:'Genuine leather • New', price:120, img:'https://placehold.co/800x600/1A2E44/FFD400?text=Jacket', rating:4.0, created:'2025-04-10'},
+        {id:'p6',cat:'home', name_ar:'طقم كنبة 3 مقاعد', name_en:'3-Seater Sofa Set', desc_ar:'قماش فاخر • ضمان سنة', desc_en:'Premium fabric • 1yr warranty', price:450, img:'https://placehold.co/800x600/0D1B2A/FFD400?text=Sofa', rating:4.2, created:'2025-03-18'}
+    ];
+
+    // -------------------------
+    // State Management
+    // -------------------------
+
+    const state = {
+        lang: localStorage.getItem('forsale_lang') || 'ar',
+        session: localStorage.getItem('forsale_session') || Date.now().toString(36),
+        user: null,
+        cart: JSON.parse(localStorage.getItem('forsale_cart') || '{}'),
+        logs: JSON.parse(localStorage.getItem('forsale_logs') || '[]'),
+        mainnet: false, // Starts on Testnet simulation
+        piLoaded: false, 
+        pi: null // Pi SDK instance
+    };
+
+    localStorage.setItem('forsale_session', state.session);
+
+    // -------------------------
+    // Utility Helpers
+    // -------------------------
+
+    const $ = id => document.getElementById(id);
+
+    function toast(msg, t=1500){ 
+        const el = $('toast'); 
+        if(!el) return; 
+        el.textContent = msg; 
+        el.style.display='block'; 
+        setTimeout(()=>el.style.display='none', t); 
+    }
+
+    function pageLog(text, level='info'){
+        const ts = new Date().toLocaleTimeString();
+        const row = {ts,text,level};
+        state.logs.push(row);
+        try{ localStorage.setItem('forsale_logs', JSON.stringify(state.logs)); }catch(e){}
+        const el = $('txLog'); 
+        if(!el) return;
+
+        const div = document.createElement('div');
+        // Apply style based on log level
+        div.innerHTML = `<small style="color:${level==='error'?'#FF6B6B': level === 'info' ? '#00FF7F' : '#9CA3AF'}">${ts}</small> ${text}`;
+        el.prepend(div);
+        
+        // Keep log tidy
+        while(el.children.length > 80) el.removeChild(el.lastChild);
+    }
+    
+    // -------------------------
+    // Language Translation Logic (UPDATED)
+    // -------------------------
+
+    function getTranslation(el, lang, key) {
+        if (key) {
+            return TRANSLATIONS[key]?.[lang] || el?.textContent || '';
+        }
+        return el.getAttribute(`data-${lang}`) || el.textContent;
+    }
+
+    function translatePage() {
+        const lang = state.lang;
+        const isRTL = lang === 'ar';
+        
+        // 1. Update HTML/Body properties (direction and lang attribute)
+        document.documentElement.setAttribute('lang', lang);
+        document.documentElement.setAttribute('dir', isRTL ? 'rtl' : 'ltr');
+        
+        // 2. Update all static elements with data-ar/data-en attributes
+        document.querySelectorAll('[data-ar], [data-en]').forEach(el => {
+            const translation = getTranslation(el, lang);
+            if (el.tagName === 'INPUT' && el.hasAttribute('placeholder')) {
+                el.setAttribute('placeholder', translation);
+            } else if (el.tagName === 'OPTION') {
+                el.textContent = translation;
+            } else if (el.tagName === 'BUTTON' || el.tagName === 'DIV' || el.tagName === 'H2' || el.tagName === 'H3' || el.tagName === 'SPAN' || el.id === 'verificationBanner') {
+                 // Check if it's the connect button and user is logged in
+                 if (el.id === 'connectBtn' && state.user) {
+                     // Do nothing, keep username
+                 } else {
+                     el.textContent = translation;
+                 }
             }
-        ];
+        });
 
-        // لتمكين تسجيلات الأخطاء في Firebase (مهم للتطوير)
-        setLogLevel('Debug');
+        // 3. Update special elements based on state/context
+        $('langToggleTop').textContent = isRTL ? 'EN' : 'AR';
+        
+        // Update Connect Button text (if disconnected)
+        if (!state.user) {
+            $('connectBtn').textContent = getTranslation(null, lang, 'connectBtn');
+            $('userInfo').querySelector('.username-text').textContent = getTranslation(null, lang, 'disconnected');
+        }
+        
+        // Update Network Button text
+        $('netBtn').textContent = state.mainnet ? getTranslation(null, lang, 'netBtnMain') : getTranslation(null, lang, 'netBtnTest');
+        
+        // Update the initial AI welcome message
+        const initialMsgEl = document.querySelector('.initial-ai-msg');
+        if (initialMsgEl) {
+             initialMsgEl.textContent = getTranslation(initialMsgEl, lang);
+        }
 
-        // **************
-        // 1. تهيئة Firebase والمصادقة
-        // **************
-        window.onload = async () => {
-            try {
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                
-                // المصادقة باستخدام رمز Pi Custom Auth Token أو تسجيل الدخول كمجهول
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
+        // Update the log label in the Logy Modal
+        const logLabelEl = document.querySelector('.log-label');
+        if (logLabelEl) {
+             logLabelEl.textContent = getTranslation(logLabelEl, lang);
+        }
 
-                // مراقبة حالة المصادقة وتحديث الواجهة
-                onAuthStateChanged(auth, (user) => {
-                    const statusEl = document.getElementById('auth-status');
-                    const userIdEl = document.getElementById('user-id');
-                    
-                    if (user) {
-                        userId = user.uid;
-                        statusEl.textContent = 'متصل (مُصادَق)';
-                        statusEl.classList.remove('text-yellow-400', 'text-orange-400');
-                        statusEl.classList.add('text-green-400');
-                        userIdEl.textContent = userId;
+        // Update dynamic components that need re-rendering
+        renderCategories();
+        renderProducts($('cats')?.querySelector('.cat.active')?.dataset.cat || 'all', $('sortSelect')?.value || 'default');
+        renderCart();
+        updateCartTotal();
+    }
+    
+    // -------------------------
+    // Render Functions (Categories & Products)
+    // -------------------------
 
-                        // عرض المنتجات التجريبية أولاً لتحسين تجربة المستخدم
-                        renderProducts(MOCK_PRODUCTS);
+    function renderCategories(){
+        const wrap = $('cats');
+        if(!wrap) return;
 
-                        // بمجرد المصادقة، ابدأ في جلب البيانات الحقيقية
-                        setupProductListener(); 
+        // Save active category before clearing
+        const activeCat = wrap.querySelector('.cat.active')?.dataset.cat || 'all';
 
-                    } else {
-                        // في حال عدم وجود مصادقة (يجب ألا يحدث مع __initial_auth_token)
-                        userId = crypto.randomUUID(); // معرف عشوائي للمجهول
-                        statusEl.textContent = 'متصل (مجهول)';
-                        statusEl.classList.remove('text-yellow-400', 'text-green-400');
-                        statusEl.classList.add('text-orange-400');
-                        userIdEl.textContent = userId;
-                        
-                        // عرض المنتجات التجريبية أولاً لتحسين تجربة المستخدم
-                        renderProducts(MOCK_PRODUCTS);
+        wrap.innerHTML = '';
 
-                        setupProductListener();
-                    }
-                });
+        CATEGORIES.forEach(c => {
+            const d = document.createElement('div');
+            d.className = 'cat' + (c.key === activeCat ? ' active' : '');
+            d.dataset.cat = c.key;
+            d.innerHTML = `<i class="fa-solid ${c.icon}"></i> <span>${state.lang==='ar'?c.ar:c.en}</span>`;
 
-            } catch (error) {
-                console.error("Firebase Initialization Error:", error);
-                document.getElementById('auth-status').textContent = 'خطأ في الاتصال';
-                document.getElementById('auth-status').classList.add('text-red-500');
-            }
+            d.addEventListener('click', () => {
+                wrap.querySelectorAll('.cat').forEach(x=>x.classList.remove('active'));
+                d.classList.add('active');
+                // Render products based on new category and current sort
+                renderProducts(c.key, $('sortSelect')?.value || 'default');
+            });
+            wrap.appendChild(d);
+        });
+
+    }
+
+    function renderProducts(category='all', sort='default'){
+        const root = $('productList');
+        if(!root) return;
+
+        let list = PRODUCTS.slice();
+
+        if(category !== 'all') list = list.filter(p => p.cat === category);
+
+        // Sort logic
+        list.sort((a,b)=>{
+            if(sort==='rating_desc') return b.rating - a.rating;
+            if(sort==='price_asc') return a.price - b.price;
+            if(sort==='price_desc') return b.price - a.price;
+            return new Date(b.created) - new Date(a.created); // Default: Latest first
+        });
+
+        root.innerHTML = '';
+
+        list.forEach(p=>{
+            const title = p['name_' + state.lang];
+            const desc = p['desc_' + state.lang];
+            const el = document.createElement('div');
+            el.className = 'product';
+            el.dataset.id = p.id;
+            el.innerHTML = `<img src="${p.img}" alt="${title}" onerror="this.onerror=null;this.src='https://placehold.co/800x600/1A2E44/FFFFFF?text=${state.lang==='ar'?'خطأ صورة':'Image+Error'}';">
+                <div class="title">${title}</div>
+                <div class="desc">${desc}</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+                    <div class="price">${p.price} Pi</div>
+                    <small class="muted"><i class="fa-solid fa-star" style="color:#FFD400"></i> ${p.rating}</small>
+                </div>`;
+
+            // click -> open modal
+            el.addEventListener('click', () => openProductModal(p.id));
+            root.appendChild(el);
+        });
+
+    }
+
+    function openProductModal(id){
+        const p = PRODUCTS.find(x=>x.id===id);
+        if(!p) return;
+
+        $('modalImg').src = p.img;
+        $('modalImg').onerror = function(){ this.onerror=null;this.src=`https://placehold.co/800x600/1A2E44/FFFFFF?text=${state.lang==='ar'?'خطأ صورة':'Image+Error'}`; }
+
+        $('modalName').textContent = p['name_' + state.lang];
+        
+        // Translate rating label within description
+        const ratingLabel = state.lang === 'ar' ? 'التقييم' : 'Rating';
+        $('modalDesc').textContent = p['desc_' + state.lang] + ` | ${ratingLabel}: ${p.rating}`;
+
+        $('modalPrice').textContent = p.price + ' Pi';
+
+        $('productModal').classList.add('show');
+
+        // set add handler (replace previous)
+        const addBtn = $('modalAdd');
+        addBtn.onclick = () => { addToCart(p.id); $('productModal').classList.remove('show'); };
+        
+        // Open Logy chat directly
+        $('modalChat').onclick = () => { 
+            $('productModal').classList.remove('show'); 
+            $('logyModal').classList.add('show'); 
+            pageLog(`${state.lang === 'ar' ? 'بدء محادثة حول المنتج' : 'Started chat about product'}: ${p['name_' + state.lang]}`);
         };
 
-        // **************
-        // 2. إدارة البيانات: المنتجات (عامة - Read-Only)
-        // **************
-        function getProductsCollectionPath() {
-            // مسار المجموعة العامة المشتركة
-            return `/artifacts/${appId}/public/data/products`;
+    }
+    
+    // -------------------------
+    // Cart Functions 
+    // -------------------------
+
+    function saveCart(){
+        localStorage.setItem('forsale_cart', JSON.stringify(state.cart));
+        updateCartTotal();
+    }
+    
+    function addToCart(id, qty=1){
+        const p = PRODUCTS.find(x=>x.id===id);
+        if(!p) return;
+        if(!state.cart[id]) state.cart[id] = {...p, qty:0};
+        state.cart[id].qty += qty;
+        saveCart();
+        pageLog(`${state.lang === 'ar' ? 'أضيف إلى العربة' : 'Added to Cart'}: ${p['name_' + state.lang]} (x${state.cart[id].qty})`);
+        renderCart(); 
+        toast(state.lang === 'ar' ? 'أضيف إلى العربة!' : 'Added to cart!', 1500);
+    }
+    
+    function renderCart(){
+        const root = $('cartArea');
+        // Filter out items with quantity 0
+        const items = Object.values(state.cart).filter(i => i.qty > 0);
+        const emptyMsg = state.lang === 'ar' ? 'العربة فارغة.' : 'Cart is empty.';
+        if(!root) return;
+
+        if(items.length === 0){
+            root.innerHTML = `<div class="muted" style="text-align:center;padding:20px 0;">${emptyMsg}</div>`;
+            return;
         }
 
-        function setupProductListener() {
-            // تأكد من تهيئة قاعدة البيانات قبل البدء
-            if (!db) return;
+        root.innerHTML = items.map(item => {
+            const name = item['name_' + state.lang];
+            const subtotal = (item.price * item.qty).toFixed(2);
             
-            const productsColRef = collection(db, getProductsCollectionPath());
-            
-            // الاستماع للتغييرات في الوقت الفعلي
-            onSnapshot(productsColRef, (snapshot) => {
-                const products = [];
-                snapshot.forEach(doc => {
-                    products.push({ id: doc.id, ...doc.data() });
-                });
-                
-                // تحديث المنتجات بالبيانات الحقيقية إذا كانت موجودة
-                if (products.length > 0) {
-                    renderProducts(products);
-                } else if (document.getElementById('products-grid').children.length === 0) {
-                    // إذا لم يتم عرض أي شيء على الشاشة، اعرض رسالة عدم وجود منتجات
-                    // هذا يحمي من مسح المنتجات التجريبية إذا كان جلب Firestore بطيئًا
-                     document.getElementById('products-grid').innerHTML = '<p class="text-white text-center col-span-full">لا توجد منتجات متاحة حالياً في قاعدة البيانات. يتم عرض البيانات التجريبية تلقائياً عند التحميل.</p>';
-                }
+            const decreaseTitle = state.lang === 'ar' ? 'إنقاص' : 'Decrease';
+            const increaseTitle = state.lang === 'ar' ? 'زيادة' : 'Increase';
+            const removeTitle = state.lang === 'ar' ? 'إزالة' : 'Remove';
 
-            }, (error) => {
-                console.error("Error fetching products:", error);
-                showSystemMessage("خطأ في قاعدة البيانات", "فشل جلب المنتجات من Firestore. يرجى التحقق من القواعد.", "error");
-            });
-        }
-
-        function renderProducts(products) {
-            const grid = document.getElementById('products-grid');
-            grid.innerHTML = ''; // مسح المحتوى القديم
-
-            if (products.length === 0) {
-                grid.innerHTML = '<p class="text-white text-center col-span-full">لا توجد منتجات متاحة حالياً.</p>';
-                return;
-            }
-
-            products.forEach(product => {
-                const priceInPi = product.price_in_pi || 'N/A';
-                const html = `
-                    <div class="product-card card p-4 rounded-xl flex flex-col justify-between">
-                        <div>
-                            <img src="${product.image_url || 'https://placehold.co/400x300/1A2E44/FFFFFF?text=صورة+المنتج'}" 
-                                    onerror="this.onerror=null;this.src='https://placehold.co/400x300/1A2E44/FFFFFF?text=صورة+المنتج';"
-                                    alt="${product.name}" class="rounded-lg mb-4 w-full h-48 object-cover">
-                            <h3 class="text-lg font-semibold text-white mb-2">${product.name}</h3>
-                            <p class="text-gray-400 text-sm mb-4 line-clamp-3">${product.description}</p>
-                        </div>
-                        <div class="mt-4 flex justify-between items-center">
-                            <span class="text-xl font-bold text-pi-yellow">${priceInPi} Pi</span>
-                            <button onclick="mockBuy('${product.name}', ${priceInPi})"
-                                    class="bg-pi-yellow text-pi-dark font-semibold py-2 px-4 rounded-lg hover:bg-yellow-400 transition duration-200">
-                                شراء
-                            </button>
-                        </div>
+            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.01);">
+                <div>
+                    <div style="font-weight:700;line-height:1.3;">${name}</div>
+                    <small class="muted">${item.price} Pi x ${item.qty}</small>
+                </div>
+                <div style="text-align:right">
+                    <div style="color:var(--pi-yellow);font-weight:700;">${subtotal} Pi</div>
+                    <div style="display:flex;gap:4px;margin-top:4px;">
+                        <button class="ghost cart-qty-btn" data-id="${item.id}" data-change="-1" title="${decreaseTitle}" style="padding:4px 8px;">-</button>
+                        <button class="ghost cart-qty-btn" data-id="${item.id}" data-change="1" title="${increaseTitle}" style="padding:4px 8px;">+</button>
+                        <button class="ghost cart-remove-btn" data-id="${item.id}" title="${removeTitle}" style="padding:4px 8px;">X</button>
                     </div>
-                `;
-                grid.insertAdjacentHTML('beforeend', html);
-            });
-        }
+                </div>
+            </div>`;
+        }).join('');
+    }
 
-        // **************
-        // 3. محاكاة الشراء (Pi Payments Mock)
-        // **************
-        window.mockBuy = (productName, price) => {
-            showSystemMessage("محاكاة عملية الشراء", `جارٍ تحويل ${price} Pi لشراء ${productName}. يجب هنا أن يتم فتح Pi Payments SDK.`, "info");
-            // هنا يجب أن يتم استدعاء Pi Payments SDK (خارج نطاق هذا الملف لبيئة الاختبار)
-            // Pi.createPayment(...)
-        }
+    function updateCartTotal(){
+        let total = 0;
+        Object.values(state.cart).forEach(item => {
+            total += item.price * item.qty;
+        });
 
-        // **************
-        // 4. وظائف واجهة المستخدم (Modal)
-        // **************
-        window.showSystemMessage = (title, content, type = "info") => {
-            const modal = document.getElementById('system-message-modal');
-            document.getElementById('modal-title').textContent = title;
-            document.getElementById('modal-content').innerHTML = content;
-            
-            const titleEl = document.getElementById('modal-title');
-            titleEl.classList.remove('text-red-600', 'text-green-600', 'text-pi-dark');
-            
-            if (type === 'error') {
-                titleEl.classList.add('text-red-600');
-            } else if (type === 'success') {
-                titleEl.classList.add('text-green-600');
-            } else {
-                 titleEl.classList.add('text-pi-dark');
-            }
-            
-            modal.classList.remove('hidden');
-        }
-
-        window.hideSystemMessage = () => {
-            document.getElementById('system-message-modal').classList.add('hidden');
-        }
+        const totalLabel = getTranslation(null, state.lang, 'total');
+        $('cartTotal').textContent = `${totalLabel}: ${total.toFixed(2)} Pi`;
         
-        // **************
-        // 6. دوال أخرى للواجهة (يمكن إضافتها هنا)
-        // **************
-        window.showCart = () => { showSystemMessage("عربة التسوق", "هنا سيتم عرض المنتجات التي اخترتها للدفع عبر Pi."); }
-        window.showProfile = () => { showSystemMessage("ملفي الشخصي", "هنا ستعرض معلومات ملفك الشخصي وعمليات الشراء السابقة."); }
-
-        // ***********************************************************************************
-        // ***********************************************************************************
-        // ** 5. وظيفة البحث الذكي (Gemini API) - تم نقلها إلى نهاية الكود لسهولة الوصول للمفتاح **
-        // ***********************************************************************************
-        // ***********************************************************************************
+        // Only enable checkout if total > 0 AND Pi SDK is loaded/simulated
+        $('checkoutBtn').disabled = total === 0 || !state.piLoaded; 
         
-        let isSearchButtonEnabled = true; // متغير للتحكم في حالة الزر (Rate Limiting)
-        const RATE_LIMIT_MS = 5000; // 5 ثوانٍ كحد أدنى بين الطلبات (للحماية من الاستخدام المفرط)
+        const payLabel = getTranslation(null, state.lang, 'pay');
+        $('checkoutBtn').textContent = `${payLabel} (${state.mainnet ? 'Mainnet' : 'Testnet'})`;
+        return total.toFixed(2);
+    }
 
-        window.handleAISearch = async () => {
-            const query = document.getElementById('ai-search-input').value.trim();
-            const resultDiv = document.getElementById('ai-search-result');
-            const button = document.getElementById('ai-search-button');
-            const messageDiv = document.getElementById('ai-message');
+    function handleCartUpdate(id, change){
+        if(!state.cart[id]) return;
+        state.cart[id].qty += change;
+
+        if(state.cart[id].qty <= 0){
+            delete state.cart[id];
+            pageLog(state.lang === 'ar' ? `تمت إزالة المنتج من العربة.` : 'Product removed from cart.');
+        } else {
+             pageLog(state.lang === 'ar' ? `تم تغيير كمية المنتج.` : 'Product quantity changed.');
+        }
+        saveCart();
+        renderCart();
+    }
+
+
+    // -------------------------
+    // Pi Network & Checkout Logic (Simulated)
+    // -------------------------
+
+    async function loadPiSDK() {
+        if(state.piLoaded) return;
+        
+        try {
+            // Lazy load Pi SDK - Note: In a real Pi Browser environment, the SDK might be globally available.
+            const Pi = await import('https://sdk.minepi.com/pi-sdk.js'); 
             
-            // تحقق من قيد معدل الطلبات
-            if (!isSearchButtonEnabled) {
-                messageDiv.textContent = "الرجاء الانتظار 5 ثوانٍ قبل البحث مرة أخرى لحماية المفتاح.";
-                messageDiv.classList.remove('hidden', 'bg-red-800');
-                messageDiv.classList.add('bg-yellow-700');
-                return;
-            }
-
-            if (!query) {
-                resultDiv.classList.add('hidden');
-                messageDiv.textContent = "الرجاء إدخال استعلام للبحث.";
-                messageDiv.classList.remove('hidden', 'bg-yellow-700');
-                messageDiv.classList.add('bg-red-800');
-                return;
-            }
-
-            // =================================================================================
-            // ** الخطوة الأخيرة والمباشرة لإضافة مفتاح الـ API **
-            // يرجى لصق مفتاحك هنا داخل علامات التنصيص:
-            const apiKey = "AIzaSyAPNHEb2BJ0VtE-zlgC-pRiJT5We8LZ40Y";
-            // =================================================================================
-            
-            if (!apiKey) {
-                resultDiv.classList.add('hidden');
-                messageDiv.textContent = "AIzaSyAPNHEb2BJ0VtE-zlgC-pRiJT5We8LZ40Y";
-                messageDiv.classList.remove('hidden', 'bg-yellow-700');
-                messageDiv.classList.add('bg-red-800');
-                return;
-            }
-
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-
-            const systemPrompt = `أنت خبير تسوق على شبكة Pi، مهمتك هي تحليل طلب المستخدم وتقديم نصيحة تسويقية مفصلة أو قائمة منتجات مقترحة. يجب أن تكون الإجابة بتنسيق Markdown. لا تتجاوز 150 كلمة. لا تستخدم علامات ترقيم (مثل علامات النجمة).`;
-            
-            const payload = {
-                contents: [{ parts: [{ text: query }] }],
-                tools: [{ "google_search": {} }],
-                systemInstruction: { parts: [{ text: systemPrompt }] },
+            // --- Mock Pi SDK functions for Testnet simulation ---
+            Pi.auth = async () => ({ user: { username: 'TestUser', uid: 'testuid' } });
+            Pi.payments = {
+                createPayment: (paymentData) => {
+                    return new Promise((resolve) => {
+                        pageLog(state.lang === 'ar' ? 'تم بدء عملية دفع Pi (محاكاة Testnet).' : 'Pi payment started (Testnet simulation).', 'info');
+                        setTimeout(() => resolve({
+                            identifier: 'tx_' + Date.now(),
+                            memo: paymentData.memo,
+                            amount: paymentData.amount,
+                            recipient: 'pi_app_developer',
+                            status: 'succeeded'
+                        }), 1500); // Simulate network delay
+                    });
+                },
+                onReady: (callback) => callback()
             };
 
-            // تفعيل قيد معدل الطلبات
-            isSearchButtonEnabled = false;
-            button.disabled = true;
-            button.textContent = 'جاري البحث...';
-            messageDiv.classList.add('hidden');
-            resultDiv.textContent = 'جاري البحث عن نتائج في الويب...';
-            resultDiv.classList.remove('hidden');
+            state.piLoaded = true;
+            state.pi = Pi;
+            
+            pageLog(state.lang === 'ar' ? `تم تحميل Pi SDK بنجاح.` : 'Pi SDK loaded successfully.', 'info');
+            await authPiUser(); // Attempt immediate login after loading SDK
 
-            try {
-                // محاكاة لعملية البحث مع Gemini
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                // هنا يجب التعامل مع الأخطاء (مثل 403 Forbidden لو المفتاح غير صحيح أو غير مُقيّد)
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+        } catch (e) {
+            pageLog(state.lang === 'ar' ? `فشل تحميل Pi SDK. العمل في وضع المحاكاة فقط.` : 'Failed to load Pi SDK. Running in simulation mode.', 'error');
+            // Even if SDK fails to load, mark it as loaded for simulation purposes (to enable cart checkout button)
+            state.piLoaded = true; 
+            updateCartTotal(); // Ensure checkout button state is updated
+        }
+    }
 
-                const result = await response.json();
-                const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "لم يتم العثور على نتائج ذات صلة.";
-                
-                // تنظيف وإزالة علامات النجمة التي قد تتسبب في مشاكل تنسيق غير مرغوب فيها
-                const cleanText = text.replace(/\*/g, '').trim(); 
-                
-                resultDiv.textContent = cleanText;
-                resultDiv.classList.remove('hidden');
+    async function authPiUser() {
+        if(!state.piLoaded || !state.pi) {
+             toast(state.lang === 'ar' ? 'SDK غير جاهز' : 'SDK not ready', 1500);
+             return;
+        }
+        const connectingText = state.lang === 'ar' ? 'جارٍ الاتصال...' : 'Connecting...';
+        const failedText = state.lang === 'ar' ? 'فشل' : 'Failed';
+        
+        $('connectBtn').textContent = connectingText;
+        $('connectBtn').disabled = true;
 
-            } catch (error) {
-                const apiKey = "AIzaSyAWsT-u3O3ZCp7m_fUsELlHjIMYA202zx0";
-                resultDiv.textContent = `حدث خطأ في الاتصال بالذكاء الاصطناعي: ${error.message}. إذا كان الخطأ 403، يرجى التحقق من المفتاح أو تقييد الموقع في Google Cloud.`;
-                resultDiv.classList.remove('hidden');
-            } finally {
-                // تعطيل الزر مؤقتاً لقيد معدل الطلبات
-                setTimeout(() => {
-                    isSearchButtonEnabled = true;
-                    button.disabled = false;
-                    button.textContent = 'بحث AI';
-                    messageDiv.classList.add('hidden');
-                }, RATE_LIMIT_MS);
-            }
+        try {
+            const authResult = await state.pi.auth({ scopes: ['username'] });
+            state.user = authResult.user;
+            $('userInfo').querySelector('.username-text').textContent = state.user.username;
+            $('connectBtn').textContent = state.user.username;
+            $('connectBtn').disabled = true;
+            pageLog(state.lang === 'ar' ? `تم الاتصال بشبكة Pi (كمستخدم: ${state.user.username}).` : `Connected to Pi (User: ${state.user.username}).`, 'info');
+            updateCartTotal(); // Enable checkout button
+
+        } catch (e) {
+            pageLog(state.lang === 'ar' ? 'فشل الاتصال بـ Pi. تأكد من استخدام Pi Browser.' : 'Pi connection failed. Use Pi Browser.', 'error');
+            $('connectBtn').textContent = failedText;
+            $('connectBtn').disabled = false;
+        }
+    }
+    
+    async function checkout(){
+        if(!state.user) {
+            toast(state.lang === 'ar' ? 'يجب الاتصال أولاً.' : 'Connect first.', 1500);
+            return;
+        }
+        if(Object.keys(state.cart).length === 0){
+             toast(state.lang === 'ar' ? 'العربة فارغة.' : 'Cart is empty.', 1500);
+             return;
+        }
+
+        const total = updateCartTotal();
+        const paymentData = {
+            amount: total,
+            memo: `Forsale Purchase - Session: ${state.session}`,
+            metadata: { cart: state.cart }
         };
-    </script>
+
+        const processingText = state.lang === 'ar' ? 'جارٍ الدفع...' : 'Processing...';
+        $('checkoutBtn').textContent = processingText;
+        $('checkoutBtn').disabled = true;
+
+        try {
+            const payment = await state.pi.payments.createPayment(paymentData);
+            pageLog(`نجح الدفع! معرف المعاملة: ${payment.identifier}`, 'info');
+            toast(state.lang === 'ar' ? 'تم الدفع بنجاح!' : 'Payment succeeded!', 3000);
+            
+            state.cart = {}; // Clear cart on success
+            saveCart();
+            renderCart();
+
+        } catch (e) {
+            pageLog(`${state.lang === 'ar' ? 'فشل الدفع' : 'Payment failed'}: ${e.message || 'Unknown Error'}`, 'error');
+            toast(state.lang === 'ar' ? 'فشل الدفع.' : 'Payment failed.', 3000);
+        } finally {
+            updateCartTotal();
+        }
+    }
+    
+    // -------------------------
+    // AI/Logy Functions (Simulated)
+    // -------------------------
+    
+    async function handleLogyChat(msg) {
+        if (!msg.trim()) return;
+
+        const body = $('logyBody');
+        const input = $('logyInput');
+        const status = $('logyStatus');
+
+        // Add user bubble
+        const userBubble = document.createElement('div');
+        userBubble.className = 'chat-bubble user';
+        userBubble.textContent = msg;
+        body.appendChild(userBubble);
+        body.scrollTop = body.scrollHeight;
+
+        // Show thinking status
+        input.disabled = true;
+        status.textContent = state.lang === 'ar' ? 'Logy يفكر...' : 'Logy thinking...';
+        
+        // Simulate response based on language and content
+        let aiResponse;
+        let recText;
+
+        if (state.lang === 'ar') {
+            aiResponse = msg.includes('توصية') || msg.includes('أفضل') ? 
+                'بناءً على طلبك، أوصي بمراجعة "هاتف Pi الذكي" لأنه يمثل قيمة عالية مقابل سعر Pi. ما هي ميزانيتك؟' :
+                'مهمتي هي مساعدتك في العثور على أفضل المنتجات في Forsale. كيف يمكنني المساعدة؟';
+            recText = 'هاتف Pi الذكي';
+        } else {
+            aiResponse = msg.toLowerCase().includes('recommend') || msg.toLowerCase().includes('best') ? 
+                'Based on your request, I recommend checking the "Pi Smart Phone" as it represents high value for Pi price. What is your budget?' :
+                'My job is to help you find the best products on Forsale. How can I assist?';
+            recText = 'Pi Smart Phone';
+        }
+            
+        // Add AI bubble 
+        const aiBubble = document.createElement('div');
+        aiBubble.className = 'chat-bubble ai';
+        
+        // Simulate AI delay
+        await new Promise(r => setTimeout(r, 1500)); 
+        aiBubble.textContent = aiResponse;
+        body.appendChild(aiBubble);
+        body.scrollTop = body.scrollHeight;
+
+        // Update main AI panel
+        const intent = msg.includes('توصية') || msg.toLowerCase().includes('recommend') ? (state.lang === 'ar' ? 'طلب توصية' : 'Recommendation Request') : (state.lang === 'ar' ? 'استفسار عام' : 'General Query');
+
+        const intentLabel = state.lang === 'ar' ? 'نوايا' : 'Intent';
+        const recLabel = state.lang === 'ar' ? 'توصية' : 'Recommendation';
+        
+        $('aiPanel').innerHTML = `<span class="ai-intent">${intentLabel}: ${intent}</span><br><span class="ai-rec">${recLabel}: ${recText}</span>`;
+            
+        // Reset controls
+        input.value = '';
+        input.disabled = false;
+        status.textContent = state.lang === 'ar' ? 'جاهز' : 'Ready';
+    }
+
+    // -------------------------
+    // Event Listeners & Init
+    // -------------------------
+    
+    function init(){
+        // 1. Initial Render & Translation
+        translatePage(); // Call to apply initial language setting
+
+        // 2. Load SDK (starts Pi connection process)
+        loadPiSDK(); 
+
+        // 3. Attach Listeners
+        $('connectBtn').addEventListener('click', authPiUser);
+        $('checkoutBtn').addEventListener('click', checkout);
+        $('clearLogs').addEventListener('click', () => { 
+            state.logs = []; 
+            localStorage.removeItem('forsale_logs'); 
+            $('txLog').innerHTML = ''; 
+            pageLog(state.lang === 'ar' ? 'تم تفريغ سجل الأحداث.' : 'Logs cleared.'); 
+        });
+        
+        // Language Toggle - FIXED: Now calls translatePage() instead of reload()
+        $('langToggleTop').addEventListener('click', () => {
+            state.lang = state.lang === 'ar' ? 'en' : 'ar';
+            localStorage.setItem('forsale_lang', state.lang);
+            translatePage();
+            pageLog(state.lang === 'ar' ? 'تم التبديل إلى اللغة ' + (state.lang === 'ar' ? 'العربية' : 'الإنجليزية') + '.' : 'Switched to ' + (state.lang === 'ar' ? 'Arabic' : 'English') + ' language.', 'info');
+        });
+        
+        // Network Toggle (Testnet/Mainnet)
+        $('netBtn').addEventListener('click', () => {
+             state.mainnet = !state.mainnet;
+             $('netBtn').textContent = state.mainnet ? getTranslation(null, state.lang, 'netBtnMain') : getTranslation(null, state.lang, 'netBtnTest');
+             pageLog(state.lang === 'ar' ? `تم التبديل إلى: ${state.mainnet ? 'Mainnet (محاكاة)' : 'Testnet (افتراضي)'}` : `Switched to: ${state.mainnet ? 'Mainnet (simulated)' : 'Testnet (default)'}`, 'info');
+             updateCartTotal();
+        });
+
+        // Cart Quantity Delegation (using event delegation for dynamic elements)
+        $('cartArea').addEventListener('click', (e) => {
+            if(e.target.classList.contains('cart-qty-btn')){
+                const id = e.target.dataset.id;
+                const change = parseInt(e.target.dataset.change);
+                handleCartUpdate(id, change);
+            }
+            if(e.target.classList.contains('cart-remove-btn')){
+                const id = e.target.dataset.id;
+                // Remove the entire item
+                handleCartUpdate(id, -state.cart[id].qty); 
+            }
+        });
+        
+        // Sorting Listener
+        $('sortSelect').addEventListener('change', (e) => {
+            const activeCat = $('cats').querySelector('.cat.active')?.dataset.cat || 'all';
+            renderProducts(activeCat, e.target.value);
+            // Log update depends on the select options' text, which is translated dynamically
+            pageLog(state.lang === 'ar' ? `تم الفرز حسب: ${e.target.options[e.target.selectedIndex].text}` : `Sorted by: ${e.target.options[e.target.selectedIndex].text}`);
+        });
+
+        // Modal Controls
+        $('closeModal').addEventListener('click', () => $('productModal').classList.remove('show'));
+        $('closeLogy').addEventListener('click', () => $('logyModal').classList.remove('show'));
+        $('logyBtn').addEventListener('click', () => $('logyModal').classList.add('show'));
+
+        // Logy Chat Handler
+        $('logySend').addEventListener('click', () => handleLogyChat($('logyInput').value));
+        $('logyInput').addEventListener('keydown', (e) => {
+            if(e.key === 'Enter') handleLogyChat($('logyInput').value);
+        });
+        
+        pageLog(state.lang === 'ar' ? 'تم تحميل واجهة Forsale بنجاح.' : 'Forsale UI loaded successfully.', 'info');
+    }
+
+    init(); // Start application
+})();
+</script>
 </body>
 </html>
