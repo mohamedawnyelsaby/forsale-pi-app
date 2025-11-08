@@ -1,34 +1,30 @@
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const code = searchParams.get("code")
+export async function POST(request: Request) {
+  try {
+    const body = await request.json()
+    const { action, amount, userId } = body
 
-  if (code) {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-            } catch {
-              // Handle cookie setting errors
-            }
-          },
-        },
-      },
-    )
+    if (action === "initiate_payment") {
+      return NextResponse.json({
+        success: true,
+        transactionId: `tx_${Date.now()}`,
+        status: "pending",
+        amount: amount,
+        network: "testnet",
+      })
+    }
 
-    await supabase.auth.exchangeCodeForSession(code)
+    if (action === "check_balance") {
+      return NextResponse.json({
+        balance: 100.5,
+        userId: userId,
+        network: "testnet",
+      })
+    }
+
+    return NextResponse.json({ error: "Unknown action" }, { status: 400 })
+  } catch (error) {
+    return NextResponse.json({ error: "Internal error" }, { status: 500 })
   }
-
-  return NextResponse.redirect(new URL("/dashboard", request.url))
 }
