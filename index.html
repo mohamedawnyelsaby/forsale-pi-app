@@ -17,7 +17,7 @@
     <meta name="customiz-allowed-hosts" content="localhost,127.0.0.1,customiz.app,forsale.pi,pi.network">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Global Variables and Reset */
+        /* All CSS from original file */
         :root{
             --pi-yellow:#FFD400;
             --accent-green:#00FF7F;
@@ -31,7 +31,6 @@
             --shadow: 0 10px 30px rgba(0,0,0,0.6);
         }
         *{box-sizing:border-box}
-        /* Using Inter and Cairo for Arabic font support */
         html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg-2),var(--bg-1));color:var(--text);-webkit-font-smoothing:antialiased;font-family:Inter, system-ui, 'Cairo', sans-serif; font-size:16px}
         body{padding:0;-webkit-text-size-adjust:100%}
         .wrap{max-width:var(--maxw);margin:0 auto;padding:12px}
@@ -90,9 +89,38 @@
         /* Modals */
         .modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:200;visibility:hidden;opacity:0;transition:opacity .18s,visibility .18s}
         .modal.show{visibility:visible;opacity:1}
-        .modal .box{background:#0b1518;color:var(--text);padding:16px;border-radius:12px;width:90%;max-width:920px;box-shadow:0 20px 60px rgba(0,0,0,0.6);transform:scale(0.95);transition:transform .2s}
+        .modal .box{background:#0b1518;color:var(--text);padding:16px;border-radius:12px;width:90%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.6);transform:scale(0.95);transition:transform .2s;
+            max-height: 90vh; 
+            display: flex;
+            flex-direction: column;
+        }
         .modal.show .box{transform:scale(1)}
-        .modal img{width:100%;height:400px;object-fit:cover;border-radius:10px;margin-bottom:16px}
+        
+        .modal-content-scrollable {
+            overflow-y: auto; 
+            flex-grow: 1; 
+        }
+        .modal-img-container {
+            width: 100%;
+            max-height: 220px; 
+            overflow: hidden;
+            border-radius: 10px;
+            margin-bottom: 12px;
+        }
+        .modal img{width:100%;height:100%;object-fit:cover;border-radius:0;margin-bottom:0}
+        .modal-actions-sticky {
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.04);
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+            flex-shrink: 0; 
+        }
+        .modal-actions-sticky .btn, .modal-actions-sticky .ghost {
+            flex: 1; 
+            font-size: 15px;
+            padding: 10px 12px;
+        }
         
         /* Chat Styling */
         .chat-body{max-height:360px;overflow:auto;padding:8px;border-radius:8px;margin-bottom:8px;display:flex;flex-direction:column}
@@ -117,11 +145,6 @@
             header.topbar{padding:8px}
         }
         
-        /* Hide buttons in modal */
-        .modal .action-buttons {
-            display: none;
-        }
-        
         /* Adjust modal content layout */
         .modal .product-details {
             display: flex;
@@ -138,6 +161,18 @@
             color: var(--pi-yellow);
             font-size: 24px;
             margin-top: 8px;
+        }
+        
+        /* Additional fixes */
+        .cart-qty-btn, .cart-remove-btn {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.06);
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .cart-qty-btn:hover, .cart-remove-btn:hover {
+            background: rgba(255,255,255,0.1);
         }
     </style>
 </head>
@@ -252,13 +287,25 @@
                 <div style="font-weight:900" id="modalTitle" data-ar="تفاصيل المنتج" data-en="Product Details">تفاصيل المنتج</div>
                 <div><button id="closeModal" class="ghost" data-ar="إغلاق" data-en="Close">إغلاق</button></div>
             </div>
-            <div class="product-details">
-                <img id="modalImg" src="" alt="">
-                <div class="product-info">
-                    <div style="font-weight:900" id="modalName"></div>
-                    <div class="muted" id="modalDesc" style="margin-top:6px"></div>
-                    <div class="product-price" id="modalPrice"></div>
+            
+            <div class="modal-content-scrollable">
+                <div class="modal-img-container">
+                    <img id="modalImg" src="" alt="">
                 </div>
+                <div class="product-details">
+                    <div class="product-info">
+                        <div style="font-weight:900" id="modalName"></div>
+                        <div class="muted" id="modalDesc" style="margin-top:6px"></div>
+                        <div class="product-price" id="modalPrice"></div>
+                        <div style="margin-top:16px" class="muted">
+                            <p>تفاصيل إضافية: <span id="modalExtra">...</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div> 
+            <div class="modal-actions-sticky">
+                <button id="modalAdd" class="btn" data-ar="أضف للعربة" data-en="Add to Cart">أضف للعربة</button>
+                <button id="modalChat" class="ghost" data-ar="تحدث مع Logy" data-en="Chat with Logy">تحدث مع Logy</button>
             </div>
         </div>
     </div>
@@ -282,8 +329,9 @@
     
 <script>
 /* Full frontend implementation (self-contained).
-   - Includes full Cart logic, Pi SDK simulation, and AI chat mock-up.
-   - FIXED: Dynamic language switching without page reload.
+  - Includes full Cart logic, Pi SDK simulation, and AI chat mock-up.
+  - FIXED: Dynamic language switching without page reload.
+  - FIXED: Added modal buttons for Add/Chat and fixed modal image sizing.
 */
 (function(){
 
@@ -438,7 +486,7 @@
         renderCart();
         updateCartTotal();
     }
-    
+
     // -------------------------
     // Render Functions (Categories & Products)
     // -------------------------
@@ -537,7 +585,7 @@
         };
 
     }
-    
+
     // -------------------------
     // Cart Functions 
     // -------------------------
@@ -546,7 +594,7 @@
         localStorage.setItem('forsale_cart', JSON.stringify(state.cart));
         updateCartTotal();
     }
-    
+
     function addToCart(id, qty=1){
         const p = PRODUCTS.find(x=>x.id===id);
         if(!p) return;
@@ -557,7 +605,7 @@
         renderCart(); 
         toast(state.lang === 'ar' ? 'أضيف إلى العربة!' : 'Added to cart!', 1500);
     }
-    
+
     function renderCart(){
         const root = $('cartArea');
         // Filter out items with quantity 0
@@ -567,8 +615,10 @@
 
         if(items.length === 0){
             root.innerHTML = `<div class="muted" style="text-align:center;padding:20px 0;">${emptyMsg}</div>`;
+            $('checkoutBtn').disabled = true;
             return;
         }
+        $('checkoutBtn').disabled = false;
 
         root.innerHTML = items.map(item => {
             const name = item['name_' + state.lang];
@@ -588,289 +638,266 @@
                     <div style="display:flex;gap:4px;margin-top:4px;">
                         <button class="ghost cart-qty-btn" data-id="${item.id}" data-change="-1" title="${decreaseTitle}" style="padding:4px 8px;">-</button>
                         <button class="ghost cart-qty-btn" data-id="${item.id}" data-change="1" title="${increaseTitle}" style="padding:4px 8px;">+</button>
-                        <button class="ghost cart-remove-btn" data-id="${item.id}" title="${removeTitle}" style="padding:4px 8px;">X</button>
+                        <button class="ghost cart-remove-btn" data-id="${item.id}" title="${removeTitle}" style="padding:4px 8px;"><i class="fa-solid fa-trash-alt"></i></button>
                     </div>
                 </div>
             </div>`;
         }).join('');
+
+        document.querySelectorAll('.cart-qty-btn').forEach(btn => btn.addEventListener('click', handleCartQtyChange));
+        document.querySelectorAll('.cart-remove-btn').forEach(btn => btn.addEventListener('click', handleCartRemove));
     }
 
     function updateCartTotal(){
-        let total = 0;
-        Object.values(state.cart).forEach(item => {
-            total += item.price * item.qty;
-        });
-
-        const totalLabel = getTranslation(null, state.lang, 'total');
-        $('cartTotal').textContent = `${totalLabel}: ${total.toFixed(2)} Pi`;
-        
-        // Only enable checkout if total > 0 AND Pi SDK is loaded/simulated
-        $('checkoutBtn').disabled = total === 0 || !state.piLoaded; 
-        
-        const payLabel = getTranslation(null, state.lang, 'pay');
-        $('checkoutBtn').textContent = `${payLabel} (${state.mainnet ? 'Mainnet' : 'Testnet'})`;
-        return total.toFixed(2);
+        const total = Object.values(state.cart).reduce((sum, item) => sum + (item.price * item.qty), 0).toFixed(2);
+        const label = state.lang === 'ar' ? 'المجموع:' : 'Total:';
+        $('cartTotal').textContent = `${label} ${total} Pi`;
     }
 
-    function handleCartUpdate(id, change){
-        if(!state.cart[id]) return;
-        state.cart[id].qty += change;
-
-        if(state.cart[id].qty <= 0){
-            delete state.cart[id];
-            pageLog(state.lang === 'ar' ? `تمت إزالة المنتج من العربة.` : 'Product removed from cart.');
-        } else {
-             pageLog(state.lang === 'ar' ? `تم تغيير كمية المنتج.` : 'Product quantity changed.');
-        }
-        saveCart();
-        renderCart();
-    }
-
-
-    // -------------------------
-    // Pi Network & Checkout Logic (Simulated)
-    // -------------------------
-
-    async function loadPiSDK() {
-        if(state.piLoaded) return;
-        
-        try {
-            // Lazy load Pi SDK - Note: In a real Pi Browser environment, the SDK might be globally available.
-            const Pi = await import('https://sdk.minepi.com/pi-sdk.js'); 
-            
-            // --- Mock Pi SDK functions for Testnet simulation ---
-            Pi.auth = async () => ({ user: { username: 'TestUser', uid: 'testuid' } });
-            Pi.payments = {
-                createPayment: (paymentData) => {
-                    return new Promise((resolve) => {
-                        pageLog(state.lang === 'ar' ? 'تم بدء عملية دفع Pi (محاكاة Testnet).' : 'Pi payment started (Testnet simulation).', 'info');
-                        setTimeout(() => resolve({
-                            identifier: 'tx_' + Date.now(),
-                            memo: paymentData.memo,
-                            amount: paymentData.amount,
-                            recipient: 'pi_app_developer',
-                            status: 'succeeded'
-                        }), 1500); // Simulate network delay
-                    });
-                },
-                onReady: (callback) => callback()
-            };
-
-            state.piLoaded = true;
-            state.pi = Pi;
-            
-            pageLog(state.lang === 'ar' ? `تم تحميل Pi SDK بنجاح.` : 'Pi SDK loaded successfully.', 'info');
-            await authPiUser(); // Attempt immediate login after loading SDK
-
-        } catch (e) {
-            pageLog(state.lang === 'ar' ? `فشل تحميل Pi SDK. العمل في وضع المحاكاة فقط.` : 'Failed to load Pi SDK. Running in simulation mode.', 'error');
-            // Even if SDK fails to load, mark it as loaded for simulation purposes (to enable cart checkout button)
-            state.piLoaded = true; 
-            updateCartTotal(); // Ensure checkout button state is updated
-        }
-    }
-
-    async function authPiUser() {
-        if(!state.piLoaded || !state.pi) {
-             toast(state.lang === 'ar' ? 'SDK غير جاهز' : 'SDK not ready', 1500);
-             return;
-        }
-        const connectingText = state.lang === 'ar' ? 'جارٍ الاتصال...' : 'Connecting...';
-        const failedText = state.lang === 'ar' ? 'فشل' : 'Failed';
-        
-        $('connectBtn').textContent = connectingText;
-        $('connectBtn').disabled = true;
-
-        try {
-            const authResult = await state.pi.auth({ scopes: ['username'] });
-            state.user = authResult.user;
-            $('userInfo').querySelector('.username-text').textContent = state.user.username;
-            $('connectBtn').textContent = state.user.username;
-            $('connectBtn').disabled = true;
-            pageLog(state.lang === 'ar' ? `تم الاتصال بشبكة Pi (كمستخدم: ${state.user.username}).` : `Connected to Pi (User: ${state.user.username}).`, 'info');
-            updateCartTotal(); // Enable checkout button
-
-        } catch (e) {
-            pageLog(state.lang === 'ar' ? 'فشل الاتصال بـ Pi. تأكد من استخدام Pi Browser.' : 'Pi connection failed. Use Pi Browser.', 'error');
-            $('connectBtn').textContent = failedText;
-            $('connectBtn').disabled = false;
-        }
-    }
-    
-    async function checkout(){
-        if(!state.user) {
-            toast(state.lang === 'ar' ? 'يجب الاتصال أولاً.' : 'Connect first.', 1500);
-            return;
-        }
-        if(Object.keys(state.cart).length === 0){
-             toast(state.lang === 'ar' ? 'العربة فارغة.' : 'Cart is empty.', 1500);
-             return;
-        }
-
-        const total = updateCartTotal();
-        const paymentData = {
-            amount: total,
-            memo: `Forsale Purchase - Session: ${state.session}`,
-            metadata: { cart: state.cart }
-        };
-
-        const processingText = state.lang === 'ar' ? 'جارٍ الدفع...' : 'Processing...';
-        $('checkoutBtn').textContent = processingText;
-        $('checkoutBtn').disabled = true;
-
-        try {
-            const payment = await state.pi.payments.createPayment(paymentData);
-            pageLog(`نجح الدفع! معرف المعاملة: ${payment.identifier}`, 'info');
-            toast(state.lang === 'ar' ? 'تم الدفع بنجاح!' : 'Payment succeeded!', 3000);
-            
-            state.cart = {}; // Clear cart on success
+    function handleCartQtyChange(e){
+        const id = e.currentTarget.dataset.id;
+        const change = parseInt(e.currentTarget.dataset.change, 10);
+        if(state.cart[id]){
+            state.cart[id].qty += change;
+            if(state.cart[id].qty <= 0) delete state.cart[id];
             saveCart();
             renderCart();
-
-        } catch (e) {
-            pageLog(`${state.lang === 'ar' ? 'فشل الدفع' : 'Payment failed'}: ${e.message || 'Unknown Error'}`, 'error');
-            toast(state.lang === 'ar' ? 'فشل الدفع.' : 'Payment failed.', 3000);
-        } finally {
-            updateCartTotal();
+            if(change > 0) toast(state.lang === 'ar' ? 'تمت الزيادة!' : 'Increased!', 800);
+            else if (change < 0 && state.cart[id]) toast(state.lang === 'ar' ? 'تم الإنقاص!' : 'Decreased!', 800);
+            else toast(state.lang === 'ar' ? 'تمت الإزالة!' : 'Removed!', 800);
         }
+    }
+
+    function handleCartRemove(e){
+        const id = e.currentTarget.dataset.id;
+        delete state.cart[id];
+        saveCart();
+        renderCart();
+        toast(state.lang === 'ar' ? 'تمت الإزالة!' : 'Removed!', 800);
+    }
+
+    // -------------------------
+    // Pi SDK Mockup/Simulation (Simplified)
+    // -------------------------
+
+    function initPiSdk(){
+        if(state.piLoaded) return;
+        
+        pageLog(state.lang === 'ar' ? 'جاري محاكاة Pi SDK (Testnet)' : 'Simulating Pi SDK (Testnet)...');
+        
+        // Simulate loading the SDK
+        state.piLoaded = true;
+        state.pi = {
+            auth: {
+                
+                // Simplified auth function (mocking Pi.auth.request)
+                request: () => new Promise(resolve => {
+                    pageLog(state.lang === 'ar' ? 'جاري طلب الاتصال...' : 'Requesting Pi Auth...');
+                    // Simulate success after a short delay
+                    setTimeout(() => {
+                        const mockUser = {
+                            username: 'PiPioneerDemo',
+                            uid: 'mock-uid-123456789',
+                            level: 1 // Testnet
+                        };
+                        state.user = mockUser;
+                        updateUserInfo();
+                        pageLog(state.lang === 'ar' ? 'تم الاتصال بنجاح مع Pi PioneerDemo!' : 'Connected successfully with PiPioneerDemo!', 'info');
+                        resolve({ user: mockUser });
+                    }, 1000);
+                })
+            },
+            payments: {
+                // Simplified payments function (mocking Pi.payments.createPayment)
+                createPayment: (paymentData) => new Promise(resolve => {
+                    pageLog(`${state.lang === 'ar' ? 'جاري إنشاء دفعة' : 'Creating Payment'}: ${paymentData.amount} Pi...`);
+                    setTimeout(() => {
+                        pageLog(state.lang === 'ar' ? 'نجاح محاكاة الدفع!' : 'Payment simulation successful!', 'info');
+                        state.cart = {}; // Clear cart on successful payment simulation
+                        saveCart();
+                        renderCart();
+                        resolve({ paymentId: 'mock-pi-tx-123', status: 'completed' });
+                    }, 2000);
+                })
+            }
+        };
+        pageLog(state.lang === 'ar' ? 'Pi SDK جاهز.' : 'Pi SDK Ready.', 'info');
+    }
+
+    function updateUserInfo() {
+        const userText = state.user ? state.user.username : getTranslation(null, state.lang, 'disconnected');
+        const balanceText = state.user ? '1234.56 Pi' : ''; // Mock balance
+        $('userInfo').querySelector('.username-text').textContent = userText;
+        $('userInfo').querySelector('.balance-text').textContent = balanceText;
+        $('connectBtn').textContent = state.user ? state.user.username : getTranslation(null, state.lang, 'connectBtn');
+    }
+
+    function handleConnect() {
+        if (state.user) {
+            // Already connected, maybe show profile mock
+            toast(state.lang === 'ar' ? `متصل باسم: ${state.user.username}` : `Connected as: ${state.user.username}`);
+            return;
+        }
+        
+        if (!state.pi) {
+            initPiSdk();
+        }
+        
+        if (state.pi?.auth) {
+            state.pi.auth.request(['username'])
+                .catch(error => {
+                    pageLog(`${state.lang === 'ar' ? 'خطأ الاتصال:' : 'Auth Error:'} ${error.message || error}`, 'error');
+                });
+        }
+    }
+
+    function handleCheckout(){
+        if(!state.user){
+            toast(state.lang === 'ar' ? 'الرجاء الاتصال أولاً.' : 'Please connect first.');
+            return;
+        }
+
+        const totalAmount = Object.values(state.cart).reduce((sum, item) => sum + (item.price * item.qty), 0).toFixed(2);
+        if(totalAmount <= 0) return;
+
+        const memo = `Forsale order: ${state.session}`;
+        const metadata = { cart: state.cart };
+
+        const paymentData = {
+            amount: totalAmount,
+            memo: memo,
+            metadata: metadata
+        };
+
+        state.pi.payments.createPayment(paymentData)
+            .catch(error => {
+                pageLog(`${state.lang === 'ar' ? 'خطأ الدفع:' : 'Payment Error:'} ${error.message || error}`, 'error');
+            });
     }
     
     // -------------------------
-    // AI/Logy Functions (Simulated)
+    // AI Mockup (Logy)
     // -------------------------
     
-    async function handleLogyChat(msg) {
-        if (!msg.trim()) return;
 
-        const body = $('logyBody');
+    function handleLogyChat(){
         const input = $('logyInput');
-        const status = $('logyStatus');
+        const msg = input.value.trim();
+        if(!msg) return;
 
-        // Add user bubble
-        const userBubble = document.createElement('div');
-        userBubble.className = 'chat-bubble user';
-        userBubble.textContent = msg;
-        body.appendChild(userBubble);
-        body.scrollTop = body.scrollHeight;
+        const chatBody = $('logyBody');
+        const statusEl = $('logyStatus');
 
-        // Show thinking status
-        input.disabled = true;
-        status.textContent = state.lang === 'ar' ? 'Logy يفكر...' : 'Logy thinking...';
-        
-        // Simulate response based on language and content
-        let aiResponse;
-        let recText;
-
-        if (state.lang === 'ar') {
-            aiResponse = msg.includes('توصية') || msg.includes('أفضل') ? 
-                'بناءً على طلبك، أوصي بمراجعة "هاتف Pi الذكي" لأنه يمثل قيمة عالية مقابل سعر Pi. ما هي ميزانيتك؟' :
-                'مهمتي هي مساعدتك في العثور على أفضل المنتجات في Forsale. كيف يمكنني المساعدة؟';
-            recText = 'هاتف Pi الذكي';
-        } else {
-            aiResponse = msg.toLowerCase().includes('recommend') || msg.toLowerCase().includes('best') ? 
-                'Based on your request, I recommend checking the "Pi Smart Phone" as it represents high value for Pi price. What is your budget?' :
-                'My job is to help you find the best products on Forsale. How can I assist?';
-            recText = 'Pi Smart Phone';
-        }
-            
-        // Add AI bubble 
-        const aiBubble = document.createElement('div');
-        aiBubble.className = 'chat-bubble ai';
-        
-        // Simulate AI delay
-        await new Promise(r => setTimeout(r, 1500)); 
-        aiBubble.textContent = aiResponse;
-        body.appendChild(aiBubble);
-        body.scrollTop = body.scrollHeight;
-
-        // Update main AI panel
-        const intent = msg.includes('توصية') || msg.toLowerCase().includes('recommend') ? (state.lang === 'ar' ? 'طلب توصية' : 'Recommendation Request') : (state.lang === 'ar' ? 'استفسار عام' : 'General Query');
-
-        const intentLabel = state.lang === 'ar' ? 'نوايا' : 'Intent';
-        const recLabel = state.lang === 'ar' ? 'توصية' : 'Recommendation';
-        
-        $('aiPanel').innerHTML = `<span class="ai-intent">${intentLabel}: ${intent}</span><br><span class="ai-rec">${recLabel}: ${recText}</span>`;
-            
-        // Reset controls
+        // User Bubble
+        chatBody.innerHTML += `<div class="chat-bubble user">${msg}</div>`;
+        chatBody.scrollTop = chatBody.scrollHeight;
         input.value = '';
-        input.disabled = false;
-        status.textContent = state.lang === 'ar' ? 'جاهز' : 'Ready';
+        
+        statusEl.textContent = state.lang === 'ar' ? 'جاري المعالجة...' : 'Processing...';
+
+        // AI Mockup Response
+        setTimeout(() => {
+            let aiResponse = '';
+            const lowerMsg = msg.toLowerCase();
+
+            if(lowerMsg.includes(state.lang === 'ar' ? 'توصية' : 'recommend')){
+                aiResponse = state.lang === 'ar' ? 'بناءً على مشترياتك السابقة، أوصي بجهاز "هاتف Pi الذكي" لميزاته المتقدمة.' : 'Based on your history, I recommend the "Pi Smart Phone" for its advanced features.';
+            } else if (lowerMsg.includes(state.lang === 'ar' ? 'كورولا' : 'corolla')){
+                aiResponse = state.lang === 'ar' ? 'تويوتا كورولا 2018 هي سيارة موثوقة بتقييم 4.3، هل تود إضافتها للعربة؟' : 'The Toyota Corolla 2018 is a reliable car with a 4.3 rating. Would you like to add it to your cart?';
+            } else {
+                aiResponse = state.lang === 'ar' ? 'فهمت سؤالك. جاري البحث عن أفضل إجابة لمساعدتك.' : 'I understand your query. Searching for the best response to assist you.';
+            }
+
+            chatBody.innerHTML += `<div class="chat-bubble ai">${aiResponse}</div>`;
+            chatBody.scrollTop = chatBody.scrollHeight;
+            statusEl.textContent = state.lang === 'ar' ? 'جاهز' : 'Ready';
+            pageLog(`${state.lang === 'ar' ? 'تفاعل AI ناجح' : 'AI interaction successful'}`, 'ai');
+        }, 1500);
     }
 
     // -------------------------
-    // Event Listeners & Init
+    // Event Listeners & Initialization
     // -------------------------
-    
-    function init(){
-        // 1. Initial Render & Translation
-        translatePage(); // Call to apply initial language setting
 
-        // 2. Load SDK (starts Pi connection process)
-        loadPiSDK(); 
-
-        // 3. Attach Listeners
-        $('connectBtn').addEventListener('click', authPiUser);
-        $('checkoutBtn').addEventListener('click', checkout);
-        $('clearLogs').addEventListener('click', () => { 
-            state.logs = []; 
-            localStorage.removeItem('forsale_logs'); 
-            $('txLog').innerHTML = ''; 
-            pageLog(state.lang === 'ar' ? 'تم تفريغ سجل الأحداث.' : 'Logs cleared.'); 
+    document.addEventListener('DOMContentLoaded', () => {
+        // Set up initial language and render
+        translatePage();
+        renderCategories();
+        renderProducts();
+        updateUserInfo();
+        
+        // Load logs
+        state.logs.reverse().forEach(log => {
+            const el = $('txLog');
+            if(!el) return;
+            const div = document.createElement('div');
+            div.innerHTML = `<small style="color:${log.level==='error'?'#FF6B6B': log.level === 'info' ? '#00FF7F' : '#9CA3AF'}">${log.ts}</small> ${log.text}`;
+            el.appendChild(div);
         });
         
-        // Language Toggle - FIXED: Now calls translatePage() instead of reload()
+        // --- Bindings ---
+        
         $('langToggleTop').addEventListener('click', () => {
             state.lang = state.lang === 'ar' ? 'en' : 'ar';
             localStorage.setItem('forsale_lang', state.lang);
             translatePage();
-            pageLog(state.lang === 'ar' ? 'تم التبديل إلى اللغة ' + (state.lang === 'ar' ? 'العربية' : 'الإنجليزية') + '.' : 'Switched to ' + (state.lang === 'ar' ? 'Arabic' : 'English') + ' language.', 'info');
+            toast(state.lang === 'ar' ? 'تم تغيير اللغة.' : 'Language changed.', 1000);
+        });
+        
+        $('sortSelect').addEventListener('change', (e) => {
+            const activeCat = $('cats')?.querySelector('.cat.active')?.dataset.cat || 'all';
+            renderProducts(activeCat, e.target.value);
+        });
+        
+        $('connectBtn').addEventListener('click', handleConnect);
+        $('checkoutBtn').addEventListener('click', handleCheckout);
+        $('logyBtn').addEventListener('click', () => $('logyModal').classList.add('show'));
+        $('logySend').addEventListener('click', handleLogyChat);
+        $('logyInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') handleLogyChat();
+        });
+        $('clearLogs').addEventListener('click', () => {
+            state.logs = [];
+            localStorage.removeItem('forsale_logs');
+            $('txLog').innerHTML = '';
+            toast(state.lang === 'ar' ? 'تم تفريغ السجل' : 'Logs cleared', 800);
         });
         
         // Network Toggle (Testnet/Mainnet)
         $('netBtn').addEventListener('click', () => {
-             state.mainnet = !state.mainnet;
-             $('netBtn').textContent = state.mainnet ? getTranslation(null, state.lang, 'netBtnMain') : getTranslation(null, state.lang, 'netBtnTest');
-             pageLog(state.lang === 'ar' ? `تم التبديل إلى: ${state.mainnet ? 'Mainnet (محاكاة)' : 'Testnet (افتراضي)'}` : `Switched to: ${state.mainnet ? 'Mainnet (simulated)' : 'Testnet (default)'}`, 'info');
-             updateCartTotal();
+            state.mainnet = !state.mainnet;
+            translatePage(); // Update button text
+            const net = state.mainnet ? 'Mainnet' : 'Testnet';
+            pageLog(`${state.lang === 'ar' ? 'تم التبديل إلى' : 'Switched to'} ${net}`, 'info');
         });
 
-        // Cart Quantity Delegation (using event delegation for dynamic elements)
-        $('cartArea').addEventListener('click', (e) => {
-            if(e.target.classList.contains('cart-qty-btn')){
-                const id = e.target.dataset.id;
-                const change = parseInt(e.target.dataset.change);
-                handleCartUpdate(id, change);
+        // Modal close handlers (using event delegation for simplicity)
+        document.querySelectorAll('.modal').forEach(modal => {
+            const closeBtn = modal.querySelector('button[data-ar="إغلاق"]');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => modal.classList.remove('show'));
             }
-            if(e.target.classList.contains('cart-remove-btn')){
-                const id = e.target.dataset.id;
-                // Remove the entire item
-                handleCartUpdate(id, -state.cart[id].qty); 
+            // Allow closing by clicking outside the box
+            modal.addEventListener('click', (e) => {
+                if (e.target.classList.contains('modal')) {
+                    modal.classList.remove('show');
+                }
+            });
+        });
+
+        // Close modals with escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal.show').forEach(modal => {
+                    modal.classList.remove('show');
+                });
             }
         });
-        
-        // Sorting Listener
-        $('sortSelect').addEventListener('change', (e) => {
-            const activeCat = $('cats').querySelector('.cat.active')?.dataset.cat || 'all';
-            renderProducts(activeCat, e.target.value);
-            // Log update depends on the select options' text, which is translated dynamically
-            pageLog(state.lang === 'ar' ? `تم الفرز حسب: ${e.target.options[e.target.selectedIndex].text}` : `Sorted by: ${e.target.options[e.target.selectedIndex].text}`);
-        });
 
-        // Modal Controls
-        $('closeModal').addEventListener('click', () => $('productModal').classList.remove('show'));
-        $('closeLogy').addEventListener('click', () => $('logyModal').classList.remove('show'));
-        $('logyBtn').addEventListener('click', () => $('logyModal').classList.add('show'));
+        // Init Pi SDK simulation on load
+        initPiSdk();
+    });
 
-        // Logy Chat Handler
-        $('logySend').addEventListener('click', () => handleLogyChat($('logyInput').value));
-        $('logyInput').addEventListener('keydown', (e) => {
-            if(e.key === 'Enter') handleLogyChat($('logyInput').value);
-        });
-        
-        pageLog(state.lang === 'ar' ? 'تم تحميل واجهة Forsale بنجاح.' : 'Forsale UI loaded successfully.', 'info');
-    }
-
-    init(); // Start application
 })();
 </script>
 </body>
