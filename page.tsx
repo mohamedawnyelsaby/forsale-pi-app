@@ -1,171 +1,216 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import type React from "react"
+
+import { useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
-import { mockAnalytics } from "@/lib/marketing"
-import { Users, ShoppingCart, TrendingUp, Package } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { ArrowLeft, Mail, Lock, User, AlertCircle } from "lucide-react"
 
-export default function AnalyticsPage() {
+export default function SignUpPage() {
   const router = useRouter()
   const supabase = createClient()
-  const [loading, setLoading] = useState(true)
-  const [isAdmin, setIsAdmin] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [formData, setFormData] = useState({
+    fullName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  })
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser()
-
-        if (!user) {
-          router.push("/auth/signin")
-          return
-        }
-
-        // In production, check if user is admin
-        setIsAdmin(true)
-      } catch (error) {
-        console.error("Error checking auth:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    checkAuth()
-  }, [supabase, router])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto"></div>
-            <p className="text-muted-foreground">Loading analytics...</p>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    )
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <h1 className="text-2xl font-bold text-foreground">Access Denied</h1>
-            <p className="text-muted-foreground">You don't have permission to view this page</p>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    )
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+
+    try {
+      // Validate form
+      if (!formData.fullName || !formData.email || !formData.password) {
+        throw new Error("Please fill in all fields")
+      }
+
+      if (formData.password !== formData.confirmPassword) {
+        throw new Error("Passwords do not match")
+      }
+
+      if (formData.password.length < 6) {
+        throw new Error("Password must be at least 6 characters")
+      }
+
+      // Sign up with Supabase
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.fullName,
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+
+      if (signUpError) throw signUpError
+
+      if (data?.user) {
+        // Create user profile
+        const { error: profileError } = await supabase.from("profiles").insert([
+          {
+            id: data.user.id,
+            full_name: formData.fullName,
+            email: formData.email,
+            avatar_url: null,
+            bio: "",
+            created_at: new Date().toISOString(),
+          },
+        ])
+
+        if (profileError) throw profileError
+
+        // Redirect to verification page
+        router.push("/auth/verify-email")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Header />
+    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        {/* Back Button */}
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition mb-8"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Home
+        </Link>
 
-      <main className="flex-1">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <h1 className="text-3xl font-bold text-foreground mb-8">Platform Analytics</h1>
+        {/* Card */}
+        <div className="bg-card border border-border rounded-2xl p-8 space-y-6">
+          {/* Header */}
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold text-foreground">Create Account</h1>
+            <p className="text-muted-foreground">Join Forsale and start buying or selling</p>
+          </div>
 
-          {/* Key Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-card border border-border rounded-xl p-6 space-y-2">
-              <div className="flex items-center gap-3">
-                <Users className="w-5 h-5 text-primary" />
-                <span className="text-muted-foreground">Total Users</span>
+          {/* Error Message */}
+          {error && (
+            <div className="flex gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSignUp} className="space-y-4">
+            {/* Full Name */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Full Name</label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  name="fullName"
+                  placeholder="John Doe"
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  className="pl-10 bg-secondary border-border text-foreground placeholder:text-muted-foreground"
+                  disabled={loading}
+                />
               </div>
-              <p className="text-3xl font-bold text-foreground">{mockAnalytics.totalUsers.toLocaleString()}</p>
             </div>
 
-            <div className="bg-card border border-border rounded-xl p-6 space-y-2">
-              <div className="flex items-center gap-3">
-                <ShoppingCart className="w-5 h-5 text-primary" />
-                <span className="text-muted-foreground">Total Orders</span>
+            {/* Email */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  type="email"
+                  name="email"
+                  placeholder="you@example.com"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="pl-10 bg-secondary border-border text-foreground placeholder:text-muted-foreground"
+                  disabled={loading}
+                />
               </div>
-              <p className="text-3xl font-bold text-foreground">{mockAnalytics.totalOrders.toLocaleString()}</p>
             </div>
 
-            <div className="bg-card border border-border rounded-xl p-6 space-y-2">
-              <div className="flex items-center gap-3">
-                <TrendingUp className="w-5 h-5 text-primary" />
-                <span className="text-muted-foreground">Total Revenue</span>
+            {/* Password */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  type="password"
+                  name="password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="pl-10 bg-secondary border-border text-foreground placeholder:text-muted-foreground"
+                  disabled={loading}
+                />
               </div>
-              <p className="text-3xl font-bold text-primary">${(mockAnalytics.totalRevenue / 1000000).toFixed(1)}M</p>
             </div>
 
-            <div className="bg-card border border-border rounded-xl p-6 space-y-2">
-              <div className="flex items-center gap-3">
-                <Package className="w-5 h-5 text-primary" />
-                <span className="text-muted-foreground">Active Listings</span>
+            {/* Confirm Password */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Confirm Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  type="password"
+                  name="confirmPassword"
+                  placeholder="••••••••"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  className="pl-10 bg-secondary border-border text-foreground placeholder:text-muted-foreground"
+                  disabled={loading}
+                />
               </div>
-              <p className="text-3xl font-bold text-foreground">{mockAnalytics.activeListings.toLocaleString()}</p>
+            </div>
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2"
+            >
+              {loading ? "Creating Account..." : "Create Account"}
+            </Button>
+          </form>
+
+          {/* Divider */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-card text-muted-foreground">Already have an account?</span>
             </div>
           </div>
 
-          {/* Detailed Metrics */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-              <h2 className="text-xl font-bold text-foreground">Performance Metrics</h2>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-foreground">Average Order Value</span>
-                    <span className="font-bold text-primary">${mockAnalytics.averageOrderValue.toFixed(2)}</span>
-                  </div>
-                  <div className="w-full bg-secondary rounded-full h-2">
-                    <div
-                      className="bg-primary h-2 rounded-full"
-                      style={{ width: `${(mockAnalytics.averageOrderValue / 100) * 100}%` }}
-                    ></div>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-foreground">Conversion Rate</span>
-                    <span className="font-bold text-primary">{mockAnalytics.conversionRate}%</span>
-                  </div>
-                  <div className="w-full bg-secondary rounded-full h-2">
-                    <div
-                      className="bg-primary h-2 rounded-full"
-                      style={{ width: `${mockAnalytics.conversionRate * 10}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-              <h2 className="text-xl font-bold text-foreground">Growth Indicators</h2>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-secondary rounded-lg">
-                  <span className="text-foreground">Monthly Growth</span>
-                  <span className="text-green-500 font-bold">+12.5%</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-secondary rounded-lg">
-                  <span className="text-foreground">User Retention</span>
-                  <span className="text-green-500 font-bold">87.3%</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-secondary rounded-lg">
-                  <span className="text-foreground">Customer Satisfaction</span>
-                  <span className="text-green-500 font-bold">4.8/5.0</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Sign In Link */}
+          <Link href="/auth/signin">
+            <Button variant="outline" className="w-full border-border hover:bg-secondary bg-transparent">
+              Sign In
+            </Button>
+          </Link>
         </div>
-      </main>
-
-      <Footer />
+      </div>
     </div>
   )
 }
