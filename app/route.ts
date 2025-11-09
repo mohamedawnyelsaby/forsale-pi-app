@@ -1,34 +1,19 @@
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const code = searchParams.get("code")
+export async function POST(request: NextRequest) {
+  try {
+    const { network } = await request.json()
 
-  if (code) {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-            } catch {
-              // Handle cookie setting errors
-            }
-          },
-        },
-      },
-    )
+    if (!["testnet", "mainnet"].includes(network)) {
+      return NextResponse.json({ error: "Invalid network" }, { status: 400 })
+    }
 
-    await supabase.auth.exchangeCodeForSession(code)
+    // In production, update user's network preference in database
+    console.log(`[Pi Network] Switched to ${network}`)
+
+    return NextResponse.json({ success: true, network })
+  } catch (error) {
+    console.error("[Pi Network] Network switch error:", error)
+    return NextResponse.json({ error: "Failed to switch network" }, { status: 500 })
   }
-
-  return NextResponse.redirect(new URL("/dashboard", request.url))
 }
