@@ -1,59 +1,58 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useMemo } from "react"
 import Link from "next/link"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
-import type { CartItem } from "@/lib/cart"
-import { calculateCartTotal, removeFromCart, updateCartItemQuantity } from "@/lib/cart"
-import { ArrowLeft, Trash2, Plus, Minus, ShoppingCart } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { searchProducts, type SearchFilters, type Product } from "@/lib/products"
+import { Search, Filter, Star, ShoppingCart, ChevronDown } from "lucide-react"
 
-export default function CartPage() {
-  const [cartItems, setCartItems] = useState<CartItem[]>([])
-  const [loading, setLoading] = useState(true)
+const categories = ["All", "Electronics", "Real Estate", "Vehicles", "Fashion", "Accessories", "Furniture"]
+const conditions = ["All", "New", "Like-new", "Good", "Fair"]
 
-  useEffect(() => {
-    // Load cart from localStorage
-    const savedCart = localStorage.getItem("cart")
-    if (savedCart) {
-      try {
-        setCartItems(JSON.parse(savedCart))
-      } catch (error) {
-        console.error("Error loading cart:", error)
-      }
-    }
-    setLoading(false)
-  }, [])
+export default function BuyPage() {
+  const [searchQuery, setSearchQuery] = useState("")
+  const [filters, setFilters] = useState<SearchFilters>({
+    category: "all",
+    minPrice: 0,
+    maxPrice: 1000000,
+    condition: "all",
+    minRating: 0,
+    sortBy: "newest",
+  })
+  const [showFilters, setShowFilters] = useState(false)
 
-  useEffect(() => {
-    // Save cart to localStorage
-    localStorage.setItem("cart", JSON.stringify(cartItems))
-  }, [cartItems])
+  const results = useMemo(() => searchProducts(searchQuery, filters), [searchQuery, filters])
 
-  const handleRemove = (productId: string) => {
-    setCartItems(removeFromCart(cartItems, productId))
+  const handleCategoryChange = (category: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      category: category === "All" ? "all" : category,
+    }))
   }
 
-  const handleQuantityChange = (productId: string, quantity: number) => {
-    setCartItems(updateCartItemQuantity(cartItems, productId, quantity))
+  const handleConditionChange = (condition: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      condition: condition === "All" ? "all" : condition.toLowerCase(),
+    }))
   }
 
-  const total = calculateCartTotal(cartItems)
+  const handlePriceChange = (type: "min" | "max", value: string) => {
+    const numValue = value ? Number.parseInt(value) : undefined
+    setFilters((prev) => ({
+      ...prev,
+      [type === "min" ? "minPrice" : "maxPrice"]: numValue,
+    }))
+  }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto"></div>
-            <p className="text-muted-foreground">Loading cart...</p>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    )
+  const handleSortChange = (sortBy: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      sortBy,
+    }))
   }
 
   return (
@@ -61,122 +60,228 @@ export default function CartPage() {
       <Header />
 
       <main className="flex-1">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Back Button */}
-          <Link
-            href="/buy"
-            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition mb-8"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Continue Shopping
-          </Link>
+        {/* Search Section */}
+        <section className="bg-card border-b border-border py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="space-y-4">
+              <h1 className="text-3xl font-bold text-foreground">Browse Products</h1>
 
-          <h1 className="text-3xl font-bold text-foreground mb-8">Shopping Cart</h1>
-
-          {cartItems.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Cart Items */}
-              <div className="lg:col-span-2 space-y-4">
-                {cartItems.map((item) => (
-                  <div key={item.product.id} className="bg-card border border-border rounded-lg p-6 flex gap-6">
-                    {/* Image */}
-                    <div className="w-24 h-24 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
-                      <img
-                        src={item.product.image || "/placeholder.svg"}
-                        alt={item.product.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-
-                    {/* Details */}
-                    <div className="flex-1 space-y-2">
-                      <h3 className="font-semibold text-foreground">{item.product.name}</h3>
-                      <p className="text-sm text-muted-foreground">{item.product.category}</p>
-                      <p className="text-lg font-bold text-primary">${item.product.price.toLocaleString()}</p>
-                    </div>
-
-                    {/* Quantity and Remove */}
-                    <div className="flex flex-col items-end justify-between">
-                      <button
-                        onClick={() => handleRemove(item.product.id)}
-                        className="p-2 hover:bg-secondary rounded-lg transition text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-
-                      <div className="flex items-center gap-2 bg-secondary rounded-lg p-1">
-                        <button
-                          onClick={() => handleQuantityChange(item.product.id, item.quantity - 1)}
-                          className="p-1 hover:bg-border rounded transition"
-                        >
-                          <Minus className="w-4 h-4 text-foreground" />
-                        </button>
-                        <span className="w-8 text-center text-foreground font-semibold">{item.quantity}</span>
-                        <button
-                          onClick={() => handleQuantityChange(item.product.id, item.quantity + 1)}
-                          className="p-1 hover:bg-border rounded transition"
-                        >
-                          <Plus className="w-4 h-4 text-foreground" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              {/* Search Bar */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Search products, categories, or sellers..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-secondary border-border text-foreground placeholder:text-muted-foreground h-12"
+                />
               </div>
 
-              {/* Order Summary */}
-              <div className="lg:col-span-1">
-                <div className="bg-card border border-border rounded-lg p-6 space-y-6 sticky top-20">
-                  <h2 className="text-xl font-bold text-foreground">Order Summary</h2>
+              {/* Results Count */}
+              <p className="text-sm text-muted-foreground">
+                Found {results.length} product{results.length !== 1 ? "s" : ""}
+              </p>
+            </div>
+          </div>
+        </section>
 
-                  <div className="space-y-3 border-t border-border pt-4">
-                    <div className="flex justify-between text-foreground">
-                      <span>Subtotal</span>
-                      <span>${total.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-foreground">
-                      <span>Shipping</span>
-                      <span>Calculated at checkout</span>
-                    </div>
-                    <div className="flex justify-between text-foreground">
-                      <span>Tax</span>
-                      <span>Calculated at checkout</span>
-                    </div>
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Sidebar Filters */}
+            <div className={`${showFilters ? "block" : "hidden"} lg:block lg:col-span-1`}>
+              <div className="bg-card border border-border rounded-xl p-6 space-y-6 sticky top-20">
+                <div>
+                  <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <Filter className="w-4 h-4" />
+                    Filters
+                  </h3>
+                </div>
+
+                {/* Category Filter */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-foreground">Category</h4>
+                  <div className="space-y-2">
+                    {categories.map((cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => handleCategoryChange(cat)}
+                        className={`w-full text-left px-3 py-2 rounded-lg transition ${
+                          (filters.category === "all" && cat === "All") || (filters.category === cat && cat !== "All")
+                            ? "bg-primary text-primary-foreground"
+                            : "text-foreground hover:bg-secondary"
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
                   </div>
+                </div>
 
-                  <div className="border-t border-border pt-4 flex justify-between text-lg font-bold text-foreground">
-                    <span>Total</span>
-                    <span className="text-primary">${total.toLocaleString()}</span>
+                {/* Price Range Filter */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-foreground">Price Range</h4>
+                  <div className="space-y-2">
+                    <Input
+                      type="number"
+                      placeholder="Min price"
+                      value={filters.minPrice || ""}
+                      onChange={(e) => handlePriceChange("min", e.target.value)}
+                      className="bg-secondary border-border text-foreground placeholder:text-muted-foreground"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Max price"
+                      value={filters.maxPrice || ""}
+                      onChange={(e) => handlePriceChange("max", e.target.value)}
+                      className="bg-secondary border-border text-foreground placeholder:text-muted-foreground"
+                    />
                   </div>
+                </div>
 
-                  <Link href="/checkout">
-                    <Button className="w-full bg-primary hover:bg-primary/90 h-12 text-base">
-                      Proceed to Checkout
-                    </Button>
-                  </Link>
+                {/* Condition Filter */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-foreground">Condition</h4>
+                  <div className="space-y-2">
+                    {conditions.map((cond) => (
+                      <button
+                        key={cond}
+                        onClick={() => handleConditionChange(cond)}
+                        className={`w-full text-left px-3 py-2 rounded-lg transition ${
+                          (filters.condition === "all" && cond === "All") ||
+                          (filters.condition === cond.toLowerCase() && cond !== "All")
+                            ? "bg-primary text-primary-foreground"
+                            : "text-foreground hover:bg-secondary"
+                        }`}
+                      >
+                        {cond}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-                  <Link href="/buy">
-                    <Button variant="outline" className="w-full border-border hover:bg-secondary bg-transparent">
-                      Continue Shopping
-                    </Button>
-                  </Link>
+                {/* Sort */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-foreground">Sort By</h4>
+                  <div className="relative">
+                    <select
+                      value={filters.sortBy || "newest"}
+                      onChange={(e) => handleSortChange(e.target.value)}
+                      className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-foreground appearance-none cursor-pointer"
+                    >
+                      <option value="newest">Newest</option>
+                      <option value="price-low">Price: Low to High</option>
+                      <option value="price-high">Price: High to Low</option>
+                      <option value="rating">Highest Rated</option>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                  </div>
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="text-center py-16">
-              <ShoppingCart className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-              <h2 className="text-2xl font-bold text-foreground mb-2">Your cart is empty</h2>
-              <p className="text-muted-foreground mb-8">Start shopping to add items to your cart</p>
-              <Link href="/buy">
-                <Button className="bg-primary hover:bg-primary/90">Start Shopping</Button>
-              </Link>
+
+            {/* Products Grid */}
+            <div className="lg:col-span-3">
+              {/* Mobile Filter Toggle */}
+              <div className="lg:hidden mb-6">
+                <Button
+                  onClick={() => setShowFilters(!showFilters)}
+                  variant="outline"
+                  className="w-full border-border hover:bg-secondary bg-transparent gap-2"
+                >
+                  <Filter className="w-4 h-4" />
+                  {showFilters ? "Hide Filters" : "Show Filters"}
+                </Button>
+              </div>
+
+              {/* Products */}
+              {results.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {results.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground mb-4">No products found matching your criteria</p>
+                  <Button
+                    onClick={() => {
+                      setSearchQuery("")
+                      setFilters({
+                        category: "all",
+                        minPrice: 0,
+                        maxPrice: 1000000,
+                        condition: "all",
+                        minRating: 0,
+                        sortBy: "newest",
+                      })
+                    }}
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </main>
 
       <Footer />
     </div>
+  )
+}
+
+function ProductCard({ product }: { product: Product }) {
+  return (
+    <Link href={`/product/${product.id}`}>
+      <div className="group bg-card border border-border rounded-xl overflow-hidden hover:border-primary transition-all duration-300 hover:shadow-lg hover:shadow-primary/20 cursor-pointer h-full flex flex-col">
+        {/* Image */}
+        <div className="relative overflow-hidden h-48 bg-secondary">
+          <img
+            src={product.image || "/placeholder.svg"}
+            alt={product.name}
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+          />
+        </div>
+
+        {/* Content */}
+        <div className="p-4 space-y-3 flex-1 flex flex-col">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <p className="text-xs text-primary font-semibold">{product.category}</p>
+              <h3 className="font-semibold text-foreground line-clamp-2">{product.name}</h3>
+            </div>
+          </div>
+
+          {/* Rating */}
+          <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
+              {[...Array(5)].map((_, i) => (
+                <Star
+                  key={i}
+                  className={`w-3 h-3 ${i < Math.floor(product.rating) ? "fill-primary text-primary" : "text-muted"}`}
+                />
+              ))}
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {product.rating} ({product.reviews})
+            </span>
+          </div>
+
+          {/* Location */}
+          <p className="text-xs text-muted-foreground">{product.location}</p>
+
+          {/* Price and Button */}
+          <div className="flex items-center justify-between pt-2 border-t border-border mt-auto">
+            <div className="text-lg font-bold text-primary">${product.price.toLocaleString()}</div>
+            <button className="p-2 bg-primary hover:bg-primary/90 rounded-lg transition">
+              <ShoppingCart className="w-4 h-4 text-primary-foreground" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </Link>
   )
 }
