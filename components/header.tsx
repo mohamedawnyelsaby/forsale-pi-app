@@ -5,7 +5,7 @@ import { ShoppingCart, Menu, Search, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { CartSidebar } from './cart-sidebar';
-import { initiatePiPayment } from '../lib/pi-network-integration'; // 💥 تم تعديل المسار هنا 💥
+import { initiatePiPayment } from '../lib/pi-network-integration'; //
 
 interface HeaderProps {
   categories: string[];
