@@ -1,3 +1,8 @@
 export default function Loading() {
-  return null
+  return (
+    <div style={{ padding: '50px', textAlign: 'center' }}>
+      {/* يمكنك وضع Spinner هنا لاحقا */}
+      Loading...
+    </div>
+  );
 }
