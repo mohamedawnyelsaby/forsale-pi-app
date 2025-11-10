@@ -1,8 +1,8 @@
 export default function Loading() {
+  // Return a simple div to ensure Next.js finds a valid component for the loading state
   return (
-    <div style={{ padding: '50px', textAlign: 'center' }}>
-      {/* يمكنك وضع Spinner هنا لاحقا */}
-      Loading...
+    <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      <h1>Loading...</h1>
     </div>
   );
 }
