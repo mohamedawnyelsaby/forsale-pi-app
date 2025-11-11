@@ -3,7 +3,7 @@ import { ArrowRight, Zap } from "lucide-react"
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-card via-background to-background py-20 md:py-32">
+x    <section className="relative overflow-hidden bg-gradient-to-br from-card via-background to-background py-20 md:py-32">
       {/* Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div>
