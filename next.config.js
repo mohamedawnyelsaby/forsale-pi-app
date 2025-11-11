@@ -1,0 +1,1 @@
+nano next.config.js
