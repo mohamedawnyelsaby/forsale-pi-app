@@ -1,27 +1,29 @@
 import type React from "react"
 import type { Metadata } from "next"
-// تم إزالة استيراد خطوط Geist التي قد تسبب مشاكل في بيئة النشر
+import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 
+const _geist = Geist({ subsets: ["latin"] })
+const _geistMono = Geist_Mono({ subsets: ["latin"] })
+
 export const metadata: Metadata = {
-  title: "Forsale - Global Marketplace",
-  description: "Buy and sell anything with AI-powered intelligence on Pi Network",
-  generator: "v0.app",
+  title: "Forsale - Global Marketplace",
+  description: "Buy and sell anything with AI-powered intelligence on Pi Network",
+  generator: "v0.app",
 }
 
 export default function RootLayout({
-  children,
+  children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode
 }>) {
-  return (
-    <html lang="en">
-      {/* تم تعديل body class لاستخدام font-sans الآمن بدون خط Geist */}
-      <body className={`font-sans antialiased`}>
-        {children}
-        <Analytics />
-      </body>
-    </html>
-  )
+  return (
+    <html lang="en">
+      <body className={`font-sans antialiased`}>
+        {children}
+        <Analytics />
+      </body>
+    </html>
+  )
 }
